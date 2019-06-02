@@ -3,6 +3,7 @@
 #include <openvr.h>
 
 #include "log.h"
+#include "async.h"
 
 class MyVRStuff
 {
@@ -13,4 +14,8 @@ public:
 private:
 	bool vrInitialized = false;
 	vr::IVRSystem* vrSystem = nullptr;
+
+	Timer timer;
+
+	void updatePosition();
 };
