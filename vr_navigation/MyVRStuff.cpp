@@ -1,30 +1,22 @@
 #include "stdafx.h"
 #include "MyVRStuff.h"
 
+// Construct / destroy
+
 MyVRStuff::MyVRStuff() {
 	log("MyVRStuff: create");
 }
 
 MyVRStuff::~MyVRStuff() {
 	log("MyVRStuff: destroy");
-	if (this->vrInitialized) {
-		vr::VR_Shutdown();
-		this->vrSystem = nullptr;
-	}
-
-	this->timer.stop();
+	this->stop();
 }
+
+// start / stop
 
 void MyVRStuff::start() {
 
-	int counter = 3;
-	this->timer.setInterval([&, counter]() mutable {
-		counter -= 1;
-		if (counter == 0) this->timer.stop();
-		log("ping %i", counter);
-	}, 1000);
-
-	log("would start VR stuff"); return;
+	// log("would start VR stuff"); return;
 
 	auto initError = vr::VRInitError_None;
 	this->vrSystem = vr::VR_Init(&initError, vr::VRApplication_Background);
@@ -45,28 +37,153 @@ void MyVRStuff::start() {
 	}
 	this->vrInitialized = true;
 
+	this->timer.setInterval(
+		[this]() mutable { this->onTick(); },
+		1000
+	);
+}
+
+void MyVRStuff::stop() {
+	this->timer.stop();
+
+	if (this->vrInitialized && this->vrSystem != nullptr) {
+		vr::VR_Shutdown();
+		this->vrSystem = nullptr;
+	}
+}
+
+// Tick
+
+void MyVRStuff::onTick() {
+	log("tick");
+	this->printDebugInfo();
+	this->checkButtonsChange();
+	return;
+	this->updatePosition();
+}
+
+void MyVRStuff::printDebugInfo() {
+	vr::VREvent_t pEvent;
+	int counter = 0;
+	while (this->vrSystem->PollNextEvent(&pEvent, sizeof(pEvent))) {
+		if (
+			pEvent.eventType == vr::VREvent_ButtonPress ||
+			pEvent.eventType == vr::VREvent_ButtonUnpress
+		) {
+			log("button state changed");
+		}
+		counter += 1;
+	}
+	if (counter > 0) {
+		log("that was %i events", counter);
+	}
+}
+
+void MyVRStuff::checkButtonsChange() {
+
+	vr::VRControllerState_t controllerState;
+	bool getStateSucceed;
+
+	// Left
+
+	getStateSucceed = this->vrSystem->GetControllerState(
+		this->leftControllerState.index,
+		&controllerState,
+		1
+	);
+	const bool leftDragging = getStateSucceed ? this->isDragButtonHeld(controllerState) : false;
+
+	// Right
+
+	getStateSucceed = this->vrSystem->GetControllerState(
+		this->rightControllerState.index,
+		&controllerState,
+		1
+	);
+	const bool rightDragging = getStateSucceed ? this->isDragButtonHeld(controllerState) : false;
+
 	//
 
-	// if (!vr::VROverlay()) {
-	//     logError("Is OpenVR running?");
-	//     throw std::runtime_error(std::string("No Overlay interface"));
-	// }
+	if (
+		leftDragging  != this->leftControllerState.dragging ||
+		rightDragging != this->rightControllerState.dragging
+	) {
+		log(
+			"drag changed\n%i: %i -> %i\n%i: %i -> %i",
+			this->leftControllerState.index,  this->leftControllerState.dragging,  leftDragging,
+			this->rightControllerState.index, this->rightControllerState.dragging, rightDragging
+		);
+		// this->getDraggedPoint(
+			// this->dragStartPos,
+			// this->dragStartYaw
+		// );
+	}
+
+	this->leftControllerState.dragging  = leftDragging;
+	this->rightControllerState.dragging = rightDragging;
 }
 
 void MyVRStuff::updatePosition() {
+	if (
+		!this->leftControllerState.dragging &&
+		!this->rightControllerState.dragging
+	) {
+		return;
+	}
 
+	const double * dragPoint;
+	double dragYaw;
+	bool dragNDropIsActive = this->getDraggedPoint(dragPoint, dragYaw);
+	if (!dragNDropIsActive) return;
+
+	this->setPositionRotation();
+
+	delete dragPoint;
+	dragPoint = nullptr;
+}
+
+// Helpers
+
+bool MyVRStuff::getDraggedPoint(
+	const double* & outDragPoint,
+	double & outDragYaw
+) {
+	return false;
+}
+
+bool MyVRStuff::getControllerPosition(vr::TrackedDeviceIndex_t controllerIndex) const {
+	vr::VRControllerState_t controllerState;
+	vr::TrackedDevicePose_t pose;
+	bool succeed = this->vrSystem->GetControllerStateWithPose(
+		this->universe,
+		controllerIndex,
+		&controllerState, 1,
+		&pose
+	);
+	if (!succeed) return false;
+
+	return true;
+}
+
+bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState) const {
+	return 0 != (
+		controllerState.ulButtonPressed &
+		vr::ButtonMaskFromId(vr::k_EButton_Grip)
+	);
+}
+
+void MyVRStuff::setPositionRotation() {
 	vr::VRChaperoneSetup()->RevertWorkingCopy();
-
-	const auto universe = vr::TrackingUniverseStanding;
 
 	unsigned collisionBoundsCount = 0;
 	vr::HmdQuad_t* collisionBounds = nullptr;
 	vr::VRChaperoneSetup()->GetWorkingCollisionBoundsInfo(nullptr, &collisionBoundsCount);
 
 	vr::HmdMatrix34_t curPos;
-	if (universe == vr::TrackingUniverseStanding) {
+	if (this->universe == vr::TrackingUniverseStanding) {
 		vr::VRChaperoneSetup()->GetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
-	} else {
+	}
+	else {
 		vr::VRChaperoneSetup()->GetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
 	}
 	if (collisionBoundsCount > 0) {
@@ -101,9 +218,10 @@ void MyVRStuff::updatePosition() {
 		}
 	}
 
-	if (universe == vr::TrackingUniverseStanding) {
+	if (this->universe == vr::TrackingUniverseStanding) {
 		vr::VRChaperoneSetup()->SetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
-	} else {
+	}
+	else {
 		vr::VRChaperoneSetup()->SetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
 	}
 
@@ -113,5 +231,4 @@ void MyVRStuff::updatePosition() {
 	}
 
 	vr::VRChaperoneSetup()->CommitWorkingCopy(vr::EChaperoneConfigFile_Live);
-
 }
