@@ -65,6 +65,8 @@ class MyVRStuff {
 			vr::HmdVector3_t & outPose
 		) const;
 
-		void setPositionRotation();
+		bool setPositionRotation(const vr::HmdVector3_t & diff);
+
+		bool MyVRStuff::test(float deltaY);
 
 };

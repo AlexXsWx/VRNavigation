@@ -20,7 +20,7 @@ void MyVRStuff::start() {
 
 	this->timer.setInterval(
 		[this]() mutable { this->processEvents(); },
-		16
+		500
 	);
 }
 
@@ -81,11 +81,19 @@ void MyVRStuff::updateButtonsStatus() {
 		leftDragging  != this->leftControllerState.wasDragging ||
 		rightDragging != this->rightControllerState.wasDragging
 	) {
-		log(
-			"drag changed\n%i: %i -> %i\n%i: %i -> %i",
-			this->leftControllerState.index,  this->leftControllerState.wasDragging,  leftDragging,
-			this->rightControllerState.index, this->rightControllerState.wasDragging, rightDragging
-		);
+		// log(
+		// 	"drag changed\n%i: %i -> %i\n%i: %i -> %i",
+		// 	this->leftControllerState.index,  this->leftControllerState.wasDragging,  leftDragging,
+		// 	this->rightControllerState.index, this->rightControllerState.wasDragging, rightDragging
+		// );
+
+		if (leftDragging && !this->leftControllerState.wasDragging) {
+			this->test(0.1);
+		}
+
+		if (rightDragging && !this->rightControllerState.wasDragging) {
+			this->test(-0.1);
+		}
 
 		this->leftControllerState.wasDragging  = leftDragging;
 		this->rightControllerState.wasDragging = rightDragging;
@@ -95,10 +103,10 @@ void MyVRStuff::updateButtonsStatus() {
 				this->dragStartPos,
 				this->dragStartYaw
 			);
-			if (succeed) {
-				log(this->dragStartPos);
-				log("%.2f", rad2deg(this->dragStartYaw));
-			}
+			// if (succeed) {
+			// 	log(this->dragStartPos);
+			// 	log("%.2f", rad2deg(this->dragStartYaw));
+			// }
 		}
 	}
 }
@@ -122,10 +130,10 @@ void MyVRStuff::updatePosition() {
 	diff.v[1] = dragPoint.v[1] - this->dragStartPos.v[1];
 	diff.v[2] = dragPoint.v[2] - this->dragStartPos.v[2];
 
-	log("position delta: %.2f\t%.2f\t%.2f", diff.v[0], diff.v[1], diff.v[2]);
-	log("yaw delta: %.2f", rad2deg(dragYaw - this->dragStartYaw));
+	// log("position delta: %.2f\t%.2f\t%.2f", diff.v[0], diff.v[1], diff.v[2]);
+	// log("yaw delta: %.2f", rad2deg(dragYaw - this->dragStartYaw));
 
-	// this->setPositionRotation();
+	this->setPositionRotation(diff);
 }
 
 // High-level helpers
@@ -246,67 +254,147 @@ bool MyVRStuff::getControllerPosition(
 	return true;
 }
 
-void MyVRStuff::setPositionRotation() {
-	vr::VRChaperoneSetup()->RevertWorkingCopy();
+bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 
-	unsigned collisionBoundsCount = 0;
-	vr::HmdQuad_t* collisionBounds = nullptr;
-	vr::VRChaperoneSetup()->GetWorkingCollisionBoundsInfo(nullptr, &collisionBoundsCount);
+	const auto chaperone = vr::VRChaperoneSetup();
+	chaperone->RevertWorkingCopy();
+
+	// unsigned collisionBoundsCount = 0;
+	// vr::HmdQuad_t* collisionBounds = nullptr;
+	// const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(nullptr, &collisionBoundsCount);
+	// if (!succeed) {
+	// 	log("Failed to GetWorkingCollisionBoundsInfo");
+	// 	return false;
+	// }
 
 	vr::HmdMatrix34_t curPos;
 	if (this->universe == vr::TrackingUniverseStanding) {
-		vr::VRChaperoneSetup()->GetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
+		const bool succeed = chaperone->GetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
+		if (!succeed) {
+			log("Failed to GetWorkingStandingZeroPoseToRawTrackingPose");
+			return false;
+		}
+	} else {
+		const bool succeed = chaperone->GetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
+		if (!succeed) {
+			log("Failed to GetWorkingSeatedZeroPoseToRawTrackingPose");
+			return false;
+		}
 	}
-	else {
-		vr::VRChaperoneSetup()->GetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
-	}
-	if (collisionBoundsCount > 0) {
-		collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
-		vr::VRChaperoneSetup()->GetWorkingCollisionBoundsInfo(
-			collisionBounds, &collisionBoundsCount
-		);
-	}
+	// if (collisionBoundsCount > 0) {
+	// 	collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
+	// 	const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(
+	// 		collisionBounds, &collisionBoundsCount
+	// 	);
+	// 	if (!succeed) {
+	// 		log("Failed to GetWorkingCollisionBoundsInfo");
+	// 		return false;
+	// 	}
+	// }
 
-	const float offsetX = 0.0f; // std::cos(angle)
-	const float offsetY = 0.0f;
-	const float offsetZ = 0.0f; // std::sin(angle)
+	// 0.413597      -1.271854       -1.985742
+	log("Current position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
 
-	curPos.m[0][3] += curPos.m[0][0] * offsetX;
-	curPos.m[1][3] += curPos.m[1][0] * offsetX;
-	curPos.m[2][3] += curPos.m[2][0] * offsetX;
+	return false;
 
-	curPos.m[0][3] += curPos.m[0][1] * offsetY;
-	curPos.m[1][3] += curPos.m[1][1] * offsetY;
-	curPos.m[2][3] += curPos.m[2][1] * offsetY;
+	curPos.m[0][3] += diff.v[0];
+	curPos.m[1][3] += diff.v[1];
+	curPos.m[2][3] += diff.v[2];
 
-	curPos.m[0][3] += curPos.m[0][2] * offsetZ;
-	curPos.m[1][3] += curPos.m[1][2] * offsetZ;
-	curPos.m[2][3] += curPos.m[2][2] * offsetZ;
+	// const float offsetX = 0.0f; // std::cos(angle)
+	// const float offsetY = 0.0f;
+	// const float offsetZ = 0.0f; // std::sin(angle)
+
+	// curPos.m[0][3] += curPos.m[0][0] * offsetX;
+	// curPos.m[1][3] += curPos.m[1][0] * offsetX;
+	// curPos.m[2][3] += curPos.m[2][0] * offsetX;
+
+	// curPos.m[0][3] += curPos.m[0][1] * offsetY;
+	// curPos.m[1][3] += curPos.m[1][1] * offsetY;
+	// curPos.m[2][3] += curPos.m[2][1] * offsetY;
+
+	// curPos.m[0][3] += curPos.m[0][2] * offsetZ;
+	// curPos.m[1][3] += curPos.m[1][2] * offsetZ;
+	// curPos.m[2][3] += curPos.m[2][2] * offsetZ;
 
 	// FIXME: init?
-	vr::HmdMatrix34_t rotMat;
-	for (unsigned b = 0; b < collisionBoundsCount; b++) {
-		for (unsigned c = 0; c < 4; c++) {
-			auto& corner = collisionBounds[b].vCorners[c];
-			vr::HmdVector3_t newVal;
-			// FIXME: set newVal value
-			// corner = newVal;
+	// vr::HmdMatrix34_t rotMat;
+	// for (unsigned b = 0; b < collisionBoundsCount; b++) {
+	// 	for (unsigned c = 0; c < 4; c++) {
+	// 		auto& corner = collisionBounds[b].vCorners[c];
+	// 		vr::HmdVector3_t newVal;
+	// 		// FIXME: set newVal value
+	// 		// corner = newVal;
+	// 	}
+	// }
+
+	if (this->universe == vr::TrackingUniverseStanding) {
+		chaperone->SetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
+	} else {
+		chaperone->SetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
+	}
+
+	// if (collisionBounds != nullptr) {
+	// 	chaperone->SetWorkingCollisionBoundsInfo(
+	// 		collisionBounds, collisionBoundsCount
+	// 	);
+	// 	delete collisionBounds;
+	// }
+
+	if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
+		return true;
+	} else {
+		log("Failed to CommitWorkingCopy");
+		return false;
+	}
+}
+
+bool MyVRStuff::test(float deltaY) {
+
+	log("Applying test %f", deltaY);
+
+	const auto chaperone = vr::VRChaperoneSetup();
+	// chaperone->RevertWorkingCopy();
+
+	vr::HmdMatrix34_t curPos;
+	if (this->universe == vr::TrackingUniverseStanding) {
+		const bool succeed = chaperone->GetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
+		if (!succeed) {
+			log("Failed to GetWorkingStandingZeroPoseToRawTrackingPose");
+			return false;
+		}
+	} else {
+		const bool succeed = chaperone->GetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
+		if (!succeed) {
+			log("Failed to GetWorkingSeatedZeroPoseToRawTrackingPose");
+			return false;
 		}
 	}
 
+	// 0.413597      -1.271854       -1.985742
+	log("Current position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
+
+	// log("Safety: disable actual logic");
+	// return false;
+
+	curPos.m[1][3] += deltaY;
+
+	log("New position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
+
 	if (this->universe == vr::TrackingUniverseStanding) {
-		vr::VRChaperoneSetup()->SetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
-	}
-	else {
-		vr::VRChaperoneSetup()->SetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
-	}
-
-	if (collisionBounds != nullptr) {
-		vr::VRChaperoneSetup()->SetWorkingCollisionBoundsInfo(
-			collisionBounds, collisionBoundsCount
-		);
-		delete collisionBounds;
+		chaperone->SetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
+	} else {
+		chaperone->SetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
 	}
 
-	vr::VRChaperoneSetup()->CommitWorkingCopy(vr::EChaperoneConfigFile_Live);
+	// if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
+	// // if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Temp)) {
+	// 	return true;
+	// } else {
+	// 	log("Failed to CommitWorkingCopy");
+	// 	return false;
+	// }
+
+	chaperone->ShowWorkingSetPreview();
+	return true;
 }
