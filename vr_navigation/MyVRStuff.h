@@ -6,6 +6,7 @@
 #include "log.h"
 #include "async.h"
 #include "math.h"
+#include "VRHelpers.h"
 
 //
 
@@ -38,6 +39,7 @@ class MyVRStuff {
 		vr::IVRSystem* vrSystem = nullptr;
 
 		const vr::TrackingUniverseOrigin universe = vr::TrackingUniverseStanding;
+		const vr::EVRButtonId dragButton = vr::k_EButton_Grip;
 
 		// FIXME: find a way to obtain correct index
 		MyControllerState leftControllerState  { 1 };
@@ -48,6 +50,7 @@ class MyVRStuff {
 		void updateButtonsStatus();
 
 		void updatePosition();
+		bool setPositionRotation(const vr::HmdVector3_t & diff);
 
 		// High-level helpers
 
@@ -56,17 +59,5 @@ class MyVRStuff {
 
 		void setDragging(vr::TrackedDeviceIndex_t index, bool dragging);
 		bool getIsDragging(vr::TrackedDeviceIndex_t index) const;
-
-		// VR helpers
-
-		vr::IVRSystem * initVrSystem() const;
-		bool getControllerPosition(
-			vr::TrackedDeviceIndex_t controllerIndex,
-			vr::HmdVector3_t & outPose
-		) const;
-
-		bool setPositionRotation(const vr::HmdVector3_t & diff);
-
-		bool MyVRStuff::test(float deltaY);
 
 };

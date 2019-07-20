@@ -16,7 +16,7 @@ MyVRStuff::~MyVRStuff() {
 
 void MyVRStuff::start() {
 
-	this->vrSystem = this->initVrSystem();
+	this->vrSystem = initVrSystem();
 
 	this->timer.setInterval(
 		[this]() mutable { this->processEvents(); },
@@ -54,11 +54,11 @@ void MyVRStuff::doProcessEvents() {
 			log(
 				"button state changed, %i: %i",
 				pEvent.trackedDeviceIndex,
-				pEvent.data.controller.button == vr::k_EButton_Grip
+				pEvent.data.controller.button == this->dragButton
 			);
 			if (
 				pEvent.trackedDeviceIndex != -1 &&
-				pEvent.data.controller.button == vr::k_EButton_Grip
+				pEvent.data.controller.button == this->dragButton
 			) {
 				this->setDragging(
 					pEvent.trackedDeviceIndex,
@@ -87,14 +87,6 @@ void MyVRStuff::updateButtonsStatus() {
 		// 	this->leftControllerState.index,  this->leftControllerState.wasDragging,  leftDragging,
 		// 	this->rightControllerState.index, this->rightControllerState.wasDragging, rightDragging
 		// );
-
-		// if (leftDragging && !this->leftControllerState.wasDragging) {
-		// 	this->test(0.1);
-		// }
-
-		// if (rightDragging && !this->rightControllerState.wasDragging) {
-		// 	this->test(-0.1);
-		// }
 
 		this->leftControllerState.wasDragging  = leftDragging;
 		this->rightControllerState.wasDragging = rightDragging;
@@ -141,161 +133,17 @@ void MyVRStuff::updatePosition() {
 	this->dragStartPos.v[2] = dragPoint.v[2];
 }
 
-// High-level helpers
-
-bool MyVRStuff::getDraggedPoint(
-	vr::HmdVector3_t & outDragPoint,
-	float & outDragYaw
-) const {
-	if (this->leftControllerState.dragging && !this->rightControllerState.dragging) {
-		outDragYaw = 0;
-		return this->getControllerPosition(this->leftControllerState.index, outDragPoint);
-	} else
-	if (!this->leftControllerState.dragging && this->rightControllerState.dragging) {
-		outDragYaw = 0;
-		return this->getControllerPosition(this->rightControllerState.index, outDragPoint);
-	} else
-	if (this->leftControllerState.dragging && this->rightControllerState.dragging) {
-		vr::HmdVector3_t leftPose;
-		vr::HmdVector3_t rightPose;
-		const bool leftSucceed  = this->getControllerPosition(this->leftControllerState.index,  leftPose);
-		const bool rightSucceed = this->getControllerPosition(this->rightControllerState.index, rightPose);
-		if (!leftSucceed || !rightSucceed) return false;
-		lerp(leftPose, rightPose, 0.5, outDragPoint);
-		outDragYaw = atan2(
-			rightPose.v[0] - leftPose.v[0],
-			rightPose.v[2] - leftPose.v[2]
-		);
-		return true;
-	}
-
-	return false;
-}
-
-bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState) const {
-	return 0 != (
-		controllerState.ulButtonPressed &
-		vr::ButtonMaskFromId(vr::k_EButton_Grip)
-	);
-}
-
-void MyVRStuff::setDragging(vr::TrackedDeviceIndex_t index, bool dragging) {
-	if (this->leftControllerState.index == index) {
-		this->leftControllerState.dragging = dragging;
-	} else
-	if (this->rightControllerState.index == index) {
-		this->rightControllerState.dragging = dragging;
-	} else {
-		log("Unexpected index %i", index);
-	}
-}
-
-bool MyVRStuff::getIsDragging(vr::TrackedDeviceIndex_t index) const {
-	if (this->leftControllerState.index == index) {
-		return this->leftControllerState.dragging;
-	} else
-	if (this->rightControllerState.index == index) {
-		return this->rightControllerState.dragging;
-	} else {
-		log("Unexpected index %i", index);
-		return false;
-	}
-}
-
-// ================================================================================================
-//                                           VR Helpers
-// ================================================================================================
-
-vr::IVRSystem* MyVRStuff::initVrSystem() const {
-	auto initError = vr::VRInitError_None;
-
-	auto vrSystem = vr::VR_Init(&initError, vr::VRApplication_Background);
-	if (initError == vr::VRInitError_None) {
-		return vrSystem;
-	}
-
-	// Handle failure
-	if (
-		initError == vr::VRInitError_Init_HmdNotFound ||
-		initError == vr::VRInitError_Init_HmdNotFoundPresenceFailed
-	) {
-		logError("Could not find HMD!");
-	}
-	else
-	if (initError == vr::VRInitError_Init_NoServerForBackgroundApp) {
-		logError("SteamVR is not running");
-	}
-	throw std::runtime_error(
-		std::string("Failed to initialize OpenVR: ") +
-		std::string(vr::VR_GetVRInitErrorAsEnglishDescription(initError))
-	);
-}
-
-// Doesn't seem to work - probably because is deprecated
-// bool MyVRStuff::getIsDragging(vr::TrackedDeviceIndex_t index) const {
-// 	vr::VRControllerState_t controllerState;
-// 	bool getStateSucceed = this->vrSystem->GetControllerState(index, &controllerState, 1);
-// 	return getStateSucceed ? this->isDragButtonHeld(controllerState) : false;
-// }
-
-bool MyVRStuff::getControllerPosition(
-	vr::TrackedDeviceIndex_t controllerIndex,
-	vr::HmdVector3_t & outPose
-) const {
-	vr::VRControllerState_t controllerState;
-	vr::TrackedDevicePose_t pose;
-	bool succeed = this->vrSystem->GetControllerStateWithPose(
-		this->universe,
-		controllerIndex,
-		&controllerState, 1,
-		&pose
-	);
-	if (!succeed) return false;
-
-	outPose.v[0] = pose.mDeviceToAbsoluteTracking.m[0][3];
-	outPose.v[1] = pose.mDeviceToAbsoluteTracking.m[1][3];
-	outPose.v[2] = pose.mDeviceToAbsoluteTracking.m[2][3];
-
-	return true;
-}
-
 bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 
-	const auto chaperone = vr::VRChaperoneSetup();
-	// chaperone->RevertWorkingCopy();
-
-	// unsigned collisionBoundsCount = 0;
-	// vr::HmdQuad_t* collisionBounds = nullptr;
-	// const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(nullptr, &collisionBoundsCount);
-	// if (!succeed) {
-	// 	log("Failed to GetWorkingCollisionBoundsInfo");
-	// 	return false;
-	// }
+	// vr::VRChaperoneSetup()->RevertWorkingCopy();
 
 	vr::HmdMatrix34_t curPos;
-	if (this->universe == vr::TrackingUniverseStanding) {
-		const bool succeed = chaperone->GetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
-		if (!succeed) {
-			log("Failed to GetWorkingStandingZeroPoseToRawTrackingPose");
-			return false;
-		}
-	} else {
-		const bool succeed = chaperone->GetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
-		if (!succeed) {
-			log("Failed to GetWorkingSeatedZeroPoseToRawTrackingPose");
-			return false;
-		}
+	unsigned collisionBoundsCount = 0;
+	vr::HmdQuad_t* collisionBounds = nullptr;
+
+	if (!getTrackingPose(this->universe, curPos/*, collisionBoundsCount, collisionBounds*/)) {
+		return false;
 	}
-	// if (collisionBoundsCount > 0) {
-	// 	collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
-	// 	const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(
-	// 		collisionBounds, &collisionBoundsCount
-	// 	);
-	// 	if (!succeed) {
-	// 		log("Failed to GetWorkingCollisionBoundsInfo");
-	// 		return false;
-	// 	}
-	// }
 
 	// 0.413597      -1.271854       -1.985742
 	log("Current position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
@@ -333,76 +181,92 @@ bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 	// 	}
 	// }
 
-	if (this->universe == vr::TrackingUniverseStanding) {
-		chaperone->SetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
-	} else {
-		chaperone->SetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
+	setTrackingPose(this->universe, curPos/*, collisionBounds, collisionBoundsCount*/);
+
+	if (collisionBounds != nullptr) {
+		delete[] collisionBounds;
 	}
 
-	// if (collisionBounds != nullptr) {
-	// 	chaperone->SetWorkingCollisionBoundsInfo(
-	// 		collisionBounds, collisionBoundsCount
-	// 	);
-	// 	delete collisionBounds;
-	// }
-
-	// if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
-	// 	return true;
-	// } else {
-	// 	log("Failed to CommitWorkingCopy");
-	// 	return false;
-	// }
-
-	chaperone->ShowWorkingSetPreview();
 	return true;
 }
 
-bool MyVRStuff::test(float deltaY) {
+// High-level helpers
 
-	log("Applying test %f", deltaY);
-
-	const auto chaperone = vr::VRChaperoneSetup();
-	// chaperone->RevertWorkingCopy();
-
-	vr::HmdMatrix34_t curPos;
-	if (this->universe == vr::TrackingUniverseStanding) {
-		const bool succeed = chaperone->GetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
-		if (!succeed) {
-			log("Failed to GetWorkingStandingZeroPoseToRawTrackingPose");
-			return false;
-		}
-	} else {
-		const bool succeed = chaperone->GetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
-		if (!succeed) {
-			log("Failed to GetWorkingSeatedZeroPoseToRawTrackingPose");
-			return false;
-		}
+bool MyVRStuff::getDraggedPoint(
+	vr::HmdVector3_t & outDragPoint,
+	float & outDragYaw
+) const {
+	if (this->leftControllerState.dragging && !this->rightControllerState.dragging) {
+		outDragYaw = 0;
+		return getControllerPosition(
+			this->vrSystem,
+			this->universe,
+			this->leftControllerState.index,
+			outDragPoint
+		);
+	} else
+	if (!this->leftControllerState.dragging && this->rightControllerState.dragging) {
+		outDragYaw = 0;
+		return getControllerPosition(
+			this->vrSystem,
+			this->universe,
+			this->rightControllerState.index,
+			outDragPoint
+		);
+	} else
+	if (this->leftControllerState.dragging && this->rightControllerState.dragging) {
+		vr::HmdVector3_t leftPose;
+		vr::HmdVector3_t rightPose;
+		const bool leftSucceed = getControllerPosition(
+			this->vrSystem,
+			this->universe,
+			this->leftControllerState.index,
+			leftPose
+		);
+		const bool rightSucceed = getControllerPosition(
+			this->vrSystem,
+			this->universe,
+			this->rightControllerState.index,
+			rightPose
+		);
+		if (!leftSucceed || !rightSucceed) return false;
+		lerp(leftPose, rightPose, 0.5, outDragPoint);
+		outDragYaw = atan2(
+			rightPose.v[0] - leftPose.v[0],
+			rightPose.v[2] - leftPose.v[2]
+		);
+		return true;
 	}
 
-	// 0.413597      -1.271854       -1.985742
-	log("Current position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
+	return false;
+}
 
-	// log("Safety: disable actual logic");
-	// return false;
+bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState) const {
+	return 0 != (
+		controllerState.ulButtonPressed &
+		vr::ButtonMaskFromId(this->dragButton)
+	);
+}
 
-	curPos.m[1][3] += deltaY;
-
-	log("New position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
-
-	if (this->universe == vr::TrackingUniverseStanding) {
-		chaperone->SetWorkingStandingZeroPoseToRawTrackingPose(&curPos);
+void MyVRStuff::setDragging(vr::TrackedDeviceIndex_t index, bool dragging) {
+	if (this->leftControllerState.index == index) {
+		this->leftControllerState.dragging = dragging;
+	} else
+	if (this->rightControllerState.index == index) {
+		this->rightControllerState.dragging = dragging;
 	} else {
-		chaperone->SetWorkingSeatedZeroPoseToRawTrackingPose(&curPos);
+		log("Unexpected index %i", index);
 	}
+}
 
-	// if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
-	// // if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Temp)) {
-	// 	return true;
-	// } else {
-	// 	log("Failed to CommitWorkingCopy");
-	// 	return false;
-	// }
-
-	chaperone->ShowWorkingSetPreview();
-	return true;
+bool MyVRStuff::getIsDragging(vr::TrackedDeviceIndex_t index) const {
+	if (this->leftControllerState.index == index) {
+		return this->leftControllerState.dragging;
+	} else
+	if (this->rightControllerState.index == index) {
+		return this->rightControllerState.dragging;
+	} else {
+		log("Unexpected index %i", index);
+		return false;
+	}
 }
