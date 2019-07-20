@@ -40,8 +40,8 @@ class MyVRStuff {
 		const vr::TrackingUniverseOrigin universe = vr::TrackingUniverseStanding;
 
 		// FIXME: find a way to obtain correct index
-		MyControllerState leftControllerState  { 3 };
-		MyControllerState rightControllerState { 4 };
+		MyControllerState leftControllerState  { 1 };
+		MyControllerState rightControllerState { 2 };
 
 		void processEvents();
 		void doProcessEvents();

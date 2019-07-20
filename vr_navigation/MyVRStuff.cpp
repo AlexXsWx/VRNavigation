@@ -20,7 +20,7 @@ void MyVRStuff::start() {
 
 	this->timer.setInterval(
 		[this]() mutable { this->processEvents(); },
-		500
+		16
 	);
 }
 
@@ -28,6 +28,7 @@ void MyVRStuff::stop() {
 	this->timer.stop();
 
 	if (this->vrSystem != nullptr) {
+		vr::VRChaperoneSetup()->HideWorkingSetPreview();
 		this->vrSystem = nullptr;
 		vr::VR_Shutdown();
 	}
@@ -87,13 +88,13 @@ void MyVRStuff::updateButtonsStatus() {
 		// 	this->rightControllerState.index, this->rightControllerState.wasDragging, rightDragging
 		// );
 
-		if (leftDragging && !this->leftControllerState.wasDragging) {
-			this->test(0.1);
-		}
+		// if (leftDragging && !this->leftControllerState.wasDragging) {
+		// 	this->test(0.1);
+		// }
 
-		if (rightDragging && !this->rightControllerState.wasDragging) {
-			this->test(-0.1);
-		}
+		// if (rightDragging && !this->rightControllerState.wasDragging) {
+		// 	this->test(-0.1);
+		// }
 
 		this->leftControllerState.wasDragging  = leftDragging;
 		this->rightControllerState.wasDragging = rightDragging;
@@ -134,6 +135,10 @@ void MyVRStuff::updatePosition() {
 	// log("yaw delta: %.2f", rad2deg(dragYaw - this->dragStartYaw));
 
 	this->setPositionRotation(diff);
+	// FIXME: don't change `dragStartPos` here
+	this->dragStartPos.v[0] = dragPoint.v[0];
+	this->dragStartPos.v[1] = dragPoint.v[1];
+	this->dragStartPos.v[2] = dragPoint.v[2];
 }
 
 // High-level helpers
@@ -257,7 +262,7 @@ bool MyVRStuff::getControllerPosition(
 bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 
 	const auto chaperone = vr::VRChaperoneSetup();
-	chaperone->RevertWorkingCopy();
+	// chaperone->RevertWorkingCopy();
 
 	// unsigned collisionBoundsCount = 0;
 	// vr::HmdQuad_t* collisionBounds = nullptr;
@@ -295,7 +300,7 @@ bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 	// 0.413597      -1.271854       -1.985742
 	log("Current position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
 
-	return false;
+	// return false;
 
 	curPos.m[0][3] += diff.v[0];
 	curPos.m[1][3] += diff.v[1];
@@ -341,12 +346,15 @@ bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 	// 	delete collisionBounds;
 	// }
 
-	if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
-		return true;
-	} else {
-		log("Failed to CommitWorkingCopy");
-		return false;
-	}
+	// if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
+	// 	return true;
+	// } else {
+	// 	log("Failed to CommitWorkingCopy");
+	// 	return false;
+	// }
+
+	chaperone->ShowWorkingSetPreview();
+	return true;
 }
 
 bool MyVRStuff::test(float deltaY) {
