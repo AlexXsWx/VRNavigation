@@ -16,29 +16,10 @@ MyVRStuff::~MyVRStuff() {
 
 void MyVRStuff::start() {
 
-	// log("would start VR stuff"); return;
-
-	auto initError = vr::VRInitError_None;
-	this->vrSystem = vr::VR_Init(&initError, vr::VRApplication_Background);
-	if (initError != vr::VRInitError_None) {
-		if (
-			initError == vr::VRInitError_Init_HmdNotFound ||
-			initError == vr::VRInitError_Init_HmdNotFoundPresenceFailed
-		) {
-			logError("Could not find HMD!");
-		} else
-		if (initError == vr::VRInitError_Init_NoServerForBackgroundApp) {
-			logError("SteamVR is not running");
-		}
-		throw std::runtime_error(
-			std::string("Failed to initialize OpenVR: ") +
-			std::string(vr::VR_GetVRInitErrorAsEnglishDescription(initError))
-		);
-	}
-	this->vrInitialized = true;
+	this->vrSystem = this->initVrSystem();
 
 	this->timer.setInterval(
-		[this]() mutable { this->onTick(); },
+		[this]() mutable { this->processEvents(); },
 		1000
 	);
 }
@@ -46,23 +27,22 @@ void MyVRStuff::start() {
 void MyVRStuff::stop() {
 	this->timer.stop();
 
-	if (this->vrInitialized && this->vrSystem != nullptr) {
-		vr::VR_Shutdown();
+	if (this->vrSystem != nullptr) {
 		this->vrSystem = nullptr;
+		vr::VR_Shutdown();
 	}
 }
 
 // Tick
 
-void MyVRStuff::onTick() {
+void MyVRStuff::processEvents() {
 	log("tick");
-	this->printDebugInfo();
-	this->checkButtonsChange();
-	return;
-	this->updatePosition();
+	this->logEvents();
+	this->updateButtonsStatus();
+	// this->updatePosition();
 }
 
-void MyVRStuff::printDebugInfo() {
+void MyVRStuff::logEvents() {
 	vr::VREvent_t pEvent;
 	int counter = 0;
 	while (this->vrSystem->PollNextEvent(&pEvent, sizeof(pEvent))) {
@@ -79,30 +59,10 @@ void MyVRStuff::printDebugInfo() {
 	}
 }
 
-void MyVRStuff::checkButtonsChange() {
+void MyVRStuff::updateButtonsStatus() {
 
-	vr::VRControllerState_t controllerState;
-	bool getStateSucceed;
-
-	// Left
-
-	getStateSucceed = this->vrSystem->GetControllerState(
-		this->leftControllerState.index,
-		&controllerState,
-		1
-	);
-	const bool leftDragging = getStateSucceed ? this->isDragButtonHeld(controllerState) : false;
-
-	// Right
-
-	getStateSucceed = this->vrSystem->GetControllerState(
-		this->rightControllerState.index,
-		&controllerState,
-		1
-	);
-	const bool rightDragging = getStateSucceed ? this->isDragButtonHeld(controllerState) : false;
-
-	//
+	const bool leftDragging  = this->getIsDragging(this->leftControllerState.index);
+	const bool rightDragging = this->getIsDragging(this->rightControllerState.index);
 
 	if (
 		leftDragging  != this->leftControllerState.dragging ||
@@ -114,8 +74,8 @@ void MyVRStuff::checkButtonsChange() {
 			this->rightControllerState.index, this->rightControllerState.dragging, rightDragging
 		);
 		// this->getDraggedPoint(
-			// this->dragStartPos,
-			// this->dragStartYaw
+		// 	this->dragStartPos,
+		// 	this->dragStartYaw
 		// );
 	}
 
@@ -142,13 +102,55 @@ void MyVRStuff::updatePosition() {
 	dragPoint = nullptr;
 }
 
-// Helpers
+// High-level helpers
 
 bool MyVRStuff::getDraggedPoint(
 	const double* & outDragPoint,
 	double & outDragYaw
-) {
+) const {
 	return false;
+}
+
+bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState) const {
+	return 0 != (
+		controllerState.ulButtonPressed &
+		vr::ButtonMaskFromId(vr::k_EButton_Grip)
+	);
+}
+
+// ================================================================================================
+//                                           VR Helpers
+// ================================================================================================
+
+vr::IVRSystem* MyVRStuff::initVrSystem() const {
+	auto initError = vr::VRInitError_None;
+
+	auto vrSystem = vr::VR_Init(&initError, vr::VRApplication_Background);
+	if (initError == vr::VRInitError_None) {
+		return vrSystem;
+	}
+
+	// Handle failure
+	if (
+		initError == vr::VRInitError_Init_HmdNotFound ||
+		initError == vr::VRInitError_Init_HmdNotFoundPresenceFailed
+	) {
+		logError("Could not find HMD!");
+	}
+	else
+	if (initError == vr::VRInitError_Init_NoServerForBackgroundApp) {
+		logError("SteamVR is not running");
+	}
+	throw std::runtime_error(
+		std::string("Failed to initialize OpenVR: ") +
+		std::string(vr::VR_GetVRInitErrorAsEnglishDescription(initError))
+	);
+}
+
+bool MyVRStuff::getIsDragging(vr::TrackedDeviceIndex_t index) const {
+	vr::VRControllerState_t controllerState;
+	bool getStateSucceed = this->vrSystem->GetControllerState(index, &controllerState, 1);
+	return getStateSucceed ? this->isDragButtonHeld(controllerState) : false;
 }
 
 bool MyVRStuff::getControllerPosition(vr::TrackedDeviceIndex_t controllerIndex) const {
@@ -163,13 +165,6 @@ bool MyVRStuff::getControllerPosition(vr::TrackedDeviceIndex_t controllerIndex) 
 	if (!succeed) return false;
 
 	return true;
-}
-
-bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState) const {
-	return 0 != (
-		controllerState.ulButtonPressed &
-		vr::ButtonMaskFromId(vr::k_EButton_Grip)
-	);
 }
 
 void MyVRStuff::setPositionRotation() {
@@ -188,7 +183,9 @@ void MyVRStuff::setPositionRotation() {
 	}
 	if (collisionBoundsCount > 0) {
 		collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
-		vr::VRChaperoneSetup()->GetWorkingCollisionBoundsInfo(collisionBounds, &collisionBoundsCount);
+		vr::VRChaperoneSetup()->GetWorkingCollisionBoundsInfo(
+			collisionBounds, &collisionBoundsCount
+		);
 	}
 
 	const float offsetX = 0.0f; // std::cos(angle)
@@ -226,7 +223,9 @@ void MyVRStuff::setPositionRotation() {
 	}
 
 	if (collisionBounds != nullptr) {
-		vr::VRChaperoneSetup()->SetWorkingCollisionBoundsInfo(collisionBounds, collisionBoundsCount);
+		vr::VRChaperoneSetup()->SetWorkingCollisionBoundsInfo(
+			collisionBounds, collisionBoundsCount
+		);
 		delete collisionBounds;
 	}
 

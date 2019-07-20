@@ -5,39 +5,54 @@
 #include "log.h"
 #include "async.h"
 
+//
+
 struct MyControllerState {
 	vr::TrackedDeviceIndex_t index;
 	bool dragging = false;
 };
 
-class MyVRStuff
-{
-public:
-	MyVRStuff();
-	~MyVRStuff();
+//
 
-	void start();
-	/// Called automatically on destroy
-	void stop();
+class MyVRStuff {
 
-private:
-	Timer timer;
+	public:
 
-	bool vrInitialized = false;
-	vr::IVRSystem* vrSystem = nullptr;
+		MyVRStuff();
+		~MyVRStuff();
 
-	const vr::TrackingUniverseOrigin universe = vr::TrackingUniverseStanding;
+		void start();
+		/// Called automatically on destroy
+		void stop();
 
-	MyControllerState leftControllerState  { 0 };
-	MyControllerState rightControllerState { 1 };
+	private:
 
-	void onTick();
-	void printDebugInfo();
-	void checkButtonsChange();
-	void updatePosition();
+		Timer timer;
 
-	bool getDraggedPoint(const double* & outDragPoint, double & outDragYaw);
-	bool getControllerPosition(vr::TrackedDeviceIndex_t controllerIndex) const;
-	bool isDragButtonHeld(const vr::VRControllerState_t & controllerState) const;
-	void setPositionRotation();
+		vr::IVRSystem* vrSystem = nullptr;
+
+		const vr::TrackingUniverseOrigin universe = vr::TrackingUniverseStanding;
+
+		MyControllerState leftControllerState  { 0 };
+		MyControllerState rightControllerState { 1 };
+
+		void processEvents();
+		void logEvents();
+		void updateButtonsStatus();
+
+		void updatePosition();
+
+		// High-level helpers
+
+		bool getDraggedPoint(const double* & outDragPoint, double & outDragYaw) const;
+		bool isDragButtonHeld(const vr::VRControllerState_t & controllerState) const;
+
+		// VR helpers
+
+		vr::IVRSystem * initVrSystem() const;
+		bool getIsDragging(vr::TrackedDeviceIndex_t index) const;
+		bool getControllerPosition(vr::TrackedDeviceIndex_t controllerIndex) const;
+
+		void setPositionRotation();
+
 };
