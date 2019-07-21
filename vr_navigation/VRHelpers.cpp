@@ -43,7 +43,6 @@ bool getControllerPosition(
     vr::TrackedDevicePose_t pose;
     bool succeed = vrSystem->GetControllerStateWithPose(
         universe,
-        // vr::TrackingUniverseRawAndUncalibrated,
         controllerIndex,
         &controllerState, 1,
         &pose

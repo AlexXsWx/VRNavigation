@@ -33,8 +33,9 @@ class MyVRStuff {
 	private:
 
 		Matrix4 dragStartTrackingPose;
-		/** relative to `dragStartTrackingPose` */
 		Vector3 dragStartDragPointPos;
+		// TODO: find a way to calculate this out of `dragStartDragPointPos`
+		Vector3 dragStartDragPointPosForRot;
 		float dragStartYaw;
 
 		Timer timer;
@@ -57,8 +58,11 @@ class MyVRStuff {
 
 		// High-level helpers
 
-		/** `outDragPoint` is relative to `getTrackingPose` */
-		bool getDraggedPoint(Vector3 & outDragPoint, float & outDragYaw) const;
+		bool getDraggedPoint(
+			Vector3 & outDragPoint,
+			float & outDragYaw,
+			bool absolute = true
+		) const;
 		bool isDragButtonHeld(const vr::VRControllerState_t & controllerState) const;
 
 		void setDragging(vr::TrackedDeviceIndex_t index, bool dragging);

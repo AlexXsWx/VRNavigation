@@ -96,6 +96,9 @@ void MyVRStuff::updateButtonsStatus() {
 				this->dragStartDragPointPos,
 				this->dragStartYaw
 			);
+			float whatever;
+			// FIXME: handle fail
+			this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, false);
 			if (succeed) {
 				log(this->dragStartDragPointPos);
 				log("%.2f", rad2deg(this->dragStartYaw));
@@ -124,6 +127,11 @@ void MyVRStuff::updatePosition() {
 
 	Matrix4 pose(this->dragStartTrackingPose);
 
+	Matrix4 poseWithoutTranslation(pose);
+	poseWithoutTranslation[12] = 0;
+	poseWithoutTranslation[13] = 0;
+	poseWithoutTranslation[14] = 0;
+
 	// Rotation
 
 	Matrix4 rotation;
@@ -134,14 +142,14 @@ void MyVRStuff::updatePosition() {
 		// 	this->dragStartTrackingPose[13]
 		// 	this->dragStartTrackingPose[14]
 		// )
-		- this->dragStartDragPointPos
+		- this->dragStartDragPointPosForRot
 	).rotateY(
 		// rotate
 		// FIXME: because this is relative, the rotation  is not one-to-one
 		180.0f / M_PI * (dragYaw - this->dragStartYaw)
 	).translate(
 		// unmove from point of rotation
-		this->dragStartDragPointPos
+		this->dragStartDragPointPosForRot
 		// - Vector3(
 		// 	this->dragStartTrackingPose[12]
 		// 	this->dragStartTrackingPose[13]
@@ -155,7 +163,7 @@ void MyVRStuff::updatePosition() {
 	translation.translate(
 		// add drag-n-drop delta
 		// FIXME: because this is relative, the translation is not one-to-one
-		dragPointPos - this->dragStartDragPointPos
+		(dragPointPos - this->dragStartDragPointPos) * poseWithoutTranslation
 	);
 
 	// FIXME: transform chaperone boundaries too
@@ -225,13 +233,17 @@ bool MyVRStuff::setPositionRotation(const Vector3 & diff) {
 
 bool MyVRStuff::getDraggedPoint(
 	Vector3 & outDragPoint,
-	float & outDragYaw
+	float & outDragYaw,
+	bool absolute
 ) const {
+	const vr::TrackingUniverseOrigin universe = (
+		absolute ? vr::TrackingUniverseRawAndUncalibrated : this->universe
+	);
 	if (this->leftControllerState.dragging && !this->rightControllerState.dragging) {
 		outDragYaw = 0;
 		return getControllerPosition(
 			this->vrSystem,
-			this->universe,
+			universe,
 			this->leftControllerState.index,
 			outDragPoint
 		);
@@ -240,7 +252,7 @@ bool MyVRStuff::getDraggedPoint(
 		outDragYaw = 0;
 		return getControllerPosition(
 			this->vrSystem,
-			this->universe,
+			universe,
 			this->rightControllerState.index,
 			outDragPoint
 		);
@@ -250,13 +262,13 @@ bool MyVRStuff::getDraggedPoint(
 		Vector3 rightPose;
 		const bool leftSucceed = getControllerPosition(
 			this->vrSystem,
-			this->universe,
+			universe,
 			this->leftControllerState.index,
 			leftPose
 		);
 		const bool rightSucceed = getControllerPosition(
 			this->vrSystem,
-			this->universe,
+			universe,
 			this->rightControllerState.index,
 			rightPose
 		);
