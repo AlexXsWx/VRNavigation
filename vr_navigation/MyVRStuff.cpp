@@ -135,34 +135,19 @@ void MyVRStuff::updatePosition() {
 	// Rotation
 
 	Matrix4 rotation;
-	rotation.translate(
+	rotation
 		// move to point of rotation
-		// Vector3(
-		// 	this->dragStartTrackingPose[12]
-		// 	this->dragStartTrackingPose[13]
-		// 	this->dragStartTrackingPose[14]
-		// )
-		- this->dragStartDragPointPosForRot
-	).rotateY(
+		.translate(-this->dragStartDragPointPosForRot)
 		// rotate
-		// FIXME: because this is relative, the rotation  is not one-to-one
-		180.0f / M_PI * (dragYaw - this->dragStartYaw)
-	).translate(
+		.rotateY(180.0f / M_PI * (dragYaw - this->dragStartYaw))
 		// unmove from point of rotation
-		this->dragStartDragPointPosForRot
-		// - Vector3(
-		// 	this->dragStartTrackingPose[12]
-		// 	this->dragStartTrackingPose[13]
-		// 	this->dragStartTrackingPose[14]
-		// )
-	);
+		.translate(this->dragStartDragPointPosForRot);
 
 	// Translation
 
 	Matrix4 translation;
 	translation.translate(
 		// add drag-n-drop delta
-		// FIXME: because this is relative, the translation is not one-to-one
 		(dragPointPos - this->dragStartDragPointPos) * poseWithoutTranslation
 	);
 
