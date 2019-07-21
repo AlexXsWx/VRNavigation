@@ -32,8 +32,9 @@ class MyVRStuff {
 
 	private:
 
-		vr::HmdMatrix34_t dragStartPose;
-		vr::HmdVector3_t dragStartDragPointPos;
+		Matrix4 dragStartTrackingPose;
+		/** relative to `dragStartTrackingPose` */
+		Vector3 dragStartDragPointPos;
 		float dragStartYaw;
 
 		Timer timer;
@@ -44,19 +45,20 @@ class MyVRStuff {
 		const vr::EVRButtonId dragButton = vr::k_EButton_Grip;
 
 		// FIXME: find a way to obtain correct index
-		MyControllerState leftControllerState  { 1 };
-		MyControllerState rightControllerState { 2 };
+		MyControllerState leftControllerState  { 3 };
+		MyControllerState rightControllerState { 4 };
 
 		void processEvents();
 		void doProcessEvents();
 		void updateButtonsStatus();
 
 		void updatePosition();
-		bool setPositionRotation(const vr::HmdVector3_t & diff);
+		bool setPositionRotation(const Vector3 & diff);
 
 		// High-level helpers
 
-		bool getDraggedPoint(vr::HmdVector3_t & outDragPoint, float & outDragYaw) const;
+		/** `outDragPoint` is relative to `getTrackingPose` */
+		bool getDraggedPoint(Vector3 & outDragPoint, float & outDragYaw) const;
 		bool isDragButtonHeld(const vr::VRControllerState_t & controllerState) const;
 
 		void setDragging(vr::TrackedDeviceIndex_t index, bool dragging);

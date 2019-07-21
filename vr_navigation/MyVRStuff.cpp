@@ -100,7 +100,7 @@ void MyVRStuff::updateButtonsStatus() {
 				log(this->dragStartDragPointPos);
 				log("%.2f", rad2deg(this->dragStartYaw));
 
-				if (!getTrackingPose(this->universe, this->dragStartPose)) {
+				if (!getTrackingPose(this->universe, this->dragStartTrackingPose)) {
 					log("Failed to getTrackingPose");
 					// TODO: handle fail
 				}
@@ -117,87 +117,58 @@ void MyVRStuff::updatePosition() {
 		return;
 	}
 
-	vr::HmdVector3_t dragPointPos;
+	Vector3 dragPointPos;
 	float dragYaw;
 	bool dragNDropIsActive = this->getDraggedPoint(dragPointPos, dragYaw);
 	if (!dragNDropIsActive) return;
 
-	Matrix4 pose(
-		this->dragStartPose.m[0][0], this->dragStartPose.m[1][0], this->dragStartPose.m[2][0], 0.0f, // this->dragStartPose.m[3][0],
-		this->dragStartPose.m[0][1], this->dragStartPose.m[1][1], this->dragStartPose.m[2][1], 0.0f, // this->dragStartPose.m[3][1],
-		this->dragStartPose.m[0][2], this->dragStartPose.m[1][2], this->dragStartPose.m[2][2], 0.0f, // this->dragStartPose.m[3][2],
-		this->dragStartPose.m[0][3], this->dragStartPose.m[1][3], this->dragStartPose.m[2][3], 1.0f  // this->dragStartPose.m[3][3]
-	);
+	Matrix4 pose(this->dragStartTrackingPose);
 
-	Matrix4 temp;
-	temp.identity();
+	// Rotation
 
-	temp.translate(
+	Matrix4 rotation;
+	rotation.translate(
 		// move to point of rotation
-		/*this->dragStartPose.m[0][3]*/ - this->dragStartDragPointPos.v[0],
-		/*this->dragStartPose.m[1][3]*/ - this->dragStartDragPointPos.v[1],
-		/*this->dragStartPose.m[2][3]*/ - this->dragStartDragPointPos.v[2]
+		// Vector3(
+		// 	this->dragStartTrackingPose[12]
+		// 	this->dragStartTrackingPose[13]
+		// 	this->dragStartTrackingPose[14]
+		// )
+		- this->dragStartDragPointPos
 	).rotateY(
 		// rotate
+		// FIXME: because this is relative, the rotation  is not one-to-one
 		180.0f / M_PI * (dragYaw - this->dragStartYaw)
 	).translate(
 		// unmove from point of rotation
-		this->dragStartDragPointPos.v[0]/* - this->dragStartPose.m[0][3]*/,
-		this->dragStartDragPointPos.v[1]/* - this->dragStartPose.m[1][3]*/,
-		this->dragStartDragPointPos.v[2]/* - this->dragStartPose.m[2][3]*/
-	).translate(
-		// add drag-n-drop delta
-		dragPointPos.v[0] - this->dragStartDragPointPos.v[0],
-		dragPointPos.v[1] - this->dragStartDragPointPos.v[1],
-		dragPointPos.v[2] - this->dragStartDragPointPos.v[2]
+		this->dragStartDragPointPos
+		// - Vector3(
+		// 	this->dragStartTrackingPose[12]
+		// 	this->dragStartTrackingPose[13]
+		// 	this->dragStartTrackingPose[14]
+		// )
 	);
 
-	pose = pose * temp;
+	// Translation
 
-	vr::HmdMatrix34_t result;
-	result.m[0][0] = pose[0];
-	result.m[1][0] = pose[1];
-	result.m[2][0] = pose[2];
-	// result.m[3][0] = pose[3];
-	result.m[0][1] = pose[4];
-	result.m[1][1] = pose[5];
-	result.m[2][1] = pose[6];
-	// result.m[3][1] = pose[7];
-	result.m[0][2] = pose[8];
-	result.m[1][2] = pose[9];
-	result.m[2][2] = pose[10];
-	// result.m[3][2] = pose[11];
-	result.m[0][3] = pose[12];
-	result.m[1][3] = pose[13];
-	result.m[2][3] = pose[14];
-	// result.m[3][3] = pose[15];
+	Matrix4 translation;
+	translation.translate(
+		// add drag-n-drop delta
+		// FIXME: because this is relative, the translation is not one-to-one
+		dragPointPos - this->dragStartDragPointPos
+	);
 
-	// FIXME: transform chaperona boundaries too
-	setTrackingPose(this->universe, result);
-
-	// // newPose = this->dragStartPose + (dragPointPos - this->dragStartDragPointPos);
-
-	// vr::HmdVector3_t diff;
-
-	// diff.v[0] = dragPointPos.v[0] - this->dragStartDragPointPos.v[0];
-	// diff.v[1] = dragPointPos.v[1] - this->dragStartDragPointPos.v[1];
-	// diff.v[2] = dragPointPos.v[2] - this->dragStartDragPointPos.v[2];
-
-	// // log("position delta: %.2f\t%.2f\t%.2f", diff.v[0], diff.v[1], diff.v[2]);
-	// // log("yaw delta: %.2f", rad2deg(dragYaw - this->dragStartYaw));
+	// FIXME: transform chaperone boundaries too
+	setTrackingPose(this->universe, pose * rotation * translation);
 
 	// this->setPositionRotation(diff);
-	// // FIXME: don't change `dragStartDragPointPos` here
-	// this->dragStartDragPointPos.v[0] = dragPointPos.v[0];
-	// this->dragStartDragPointPos.v[1] = dragPointPos.v[1];
-	// this->dragStartDragPointPos.v[2] = dragPointPos.v[2];
 }
 
-bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
+bool MyVRStuff::setPositionRotation(const Vector3 & diff) {
 
 	// vr::VRChaperoneSetup()->RevertWorkingCopy();
 
-	vr::HmdMatrix34_t curPos;
+	Matrix4 curPos;
 	unsigned collisionBoundsCount = 0;
 	vr::HmdQuad_t* collisionBounds = nullptr;
 
@@ -206,13 +177,13 @@ bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 	}
 
 	// 0.413597      -1.271854       -1.985742
-	log("Current position: %f\t%f\t%f", curPos.m[0][3], curPos.m[1][3], curPos.m[2][3]);
+	log("Current position: %f\t%f\t%f", curPos[12], curPos[13], curPos[14]);
 
 	// return false;
 
-	curPos.m[0][3] += diff.v[0];
-	curPos.m[1][3] += diff.v[1];
-	curPos.m[2][3] += diff.v[2];
+	curPos[12] += diff[0];
+	curPos[13] += diff[1];
+	curPos[14] += diff[2];
 
 	// const float offsetX = 0.0f; // std::cos(angle)
 	// const float offsetY = 0.0f;
@@ -253,7 +224,7 @@ bool MyVRStuff::setPositionRotation(const vr::HmdVector3_t & diff) {
 // High-level helpers
 
 bool MyVRStuff::getDraggedPoint(
-	vr::HmdVector3_t & outDragPoint,
+	Vector3 & outDragPoint,
 	float & outDragYaw
 ) const {
 	if (this->leftControllerState.dragging && !this->rightControllerState.dragging) {
@@ -275,8 +246,8 @@ bool MyVRStuff::getDraggedPoint(
 		);
 	} else
 	if (this->leftControllerState.dragging && this->rightControllerState.dragging) {
-		vr::HmdVector3_t leftPose;
-		vr::HmdVector3_t rightPose;
+		Vector3 leftPose;
+		Vector3 rightPose;
 		const bool leftSucceed = getControllerPosition(
 			this->vrSystem,
 			this->universe,
@@ -292,8 +263,8 @@ bool MyVRStuff::getDraggedPoint(
 		if (!leftSucceed || !rightSucceed) return false;
 		lerp(leftPose, rightPose, 0.5, outDragPoint);
 		outDragYaw = atan2(
-			rightPose.v[0] - leftPose.v[0],
-			rightPose.v[2] - leftPose.v[2]
+			rightPose[0] - leftPose[0],
+			rightPose[2] - leftPose[2]
 		);
 		return true;
 	}

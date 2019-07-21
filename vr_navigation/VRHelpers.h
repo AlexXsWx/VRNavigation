@@ -3,6 +3,7 @@
 #include <openvr.h>
 
 #include "log.h"
+#include "shared/Matrices.h"
 
 //
 
@@ -14,19 +15,19 @@ bool getControllerPosition(
     vr::IVRSystem * vrSystem,
     vr::TrackingUniverseOrigin universe,
     vr::TrackedDeviceIndex_t controllerIndex,
-    vr::HmdVector3_t & outPose
+    Vector3 & outPose
 );
 
 // Tracking pose get/set
 
 bool getTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    vr::HmdMatrix34_t & outPose
+    Matrix4 & outPose
 );
 
 bool getTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    vr::HmdMatrix34_t & outPose,
+    Matrix4 & outPose,
     unsigned & outCollisionBoundsCount,
     vr::HmdQuad_t* & outCollisionBounds
 );
@@ -35,13 +36,13 @@ bool getTrackingPose(
 
 void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    const vr::HmdMatrix34_t & pose,
+    const Matrix4 & pose,
     const bool doCommitPose = true
 );
 
 void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    const vr::HmdMatrix34_t & pose,
+    const Matrix4 & pose,
     vr::HmdQuad_t * & collisionBounds,
     const unsigned collisionBoundsCount
 );

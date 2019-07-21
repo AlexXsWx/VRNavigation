@@ -2,14 +2,14 @@
 #include "math.h"
 
 void lerp(
-    vr::HmdVector3_t a,
-    vr::HmdVector3_t b,
+    Vector3 a,
+    Vector3 b,
     float weight,
-    vr::HmdVector3_t & outResult
+    Vector3 & outResult
 ) {
-    outResult.v[0] = lerp(a.v[0], b.v[0], weight);
-    outResult.v[1] = lerp(a.v[1], b.v[1], weight);
-    outResult.v[2] = lerp(a.v[2], b.v[2], weight);
+    outResult[0] = lerp(a[0], b[0], weight);
+    outResult[1] = lerp(a[1], b[1], weight);
+    outResult[2] = lerp(a[2], b[2], weight);
 }
 
 float lerp(float a, float b, float weight) {

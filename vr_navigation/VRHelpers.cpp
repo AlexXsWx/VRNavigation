@@ -37,21 +37,22 @@ bool getControllerPosition(
     vr::IVRSystem * vrSystem,
     vr::TrackingUniverseOrigin universe,
     vr::TrackedDeviceIndex_t controllerIndex,
-    vr::HmdVector3_t & outPose
+    Vector3 & outPose
 ) {
     vr::VRControllerState_t controllerState;
     vr::TrackedDevicePose_t pose;
     bool succeed = vrSystem->GetControllerStateWithPose(
         universe,
+        // vr::TrackingUniverseRawAndUncalibrated,
         controllerIndex,
         &controllerState, 1,
         &pose
     );
     if (!succeed) return false;
 
-    outPose.v[0] = pose.mDeviceToAbsoluteTracking.m[0][3];
-    outPose.v[1] = pose.mDeviceToAbsoluteTracking.m[1][3];
-    outPose.v[2] = pose.mDeviceToAbsoluteTracking.m[2][3];
+    outPose[0] = pose.mDeviceToAbsoluteTracking.m[0][3];
+    outPose[1] = pose.mDeviceToAbsoluteTracking.m[1][3];
+    outPose[2] = pose.mDeviceToAbsoluteTracking.m[2][3];
 
     return true;
 }
@@ -60,30 +61,43 @@ bool getControllerPosition(
 
 bool getTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    vr::HmdMatrix34_t & outPose
+    Matrix4 & outPose
 ) {
     const auto chaperone = vr::VRChaperoneSetup();
 
+    vr::HmdMatrix34_t pose;
+
     if (universe == vr::TrackingUniverseStanding) {
-        const bool succeed = chaperone->GetWorkingStandingZeroPoseToRawTrackingPose(&outPose);
+        const bool succeed = chaperone->GetWorkingStandingZeroPoseToRawTrackingPose(&pose);
         if (!succeed) {
             log("Failed to GetWorkingStandingZeroPoseToRawTrackingPose");
             return false;
         }
-    } else {
-        const bool succeed = chaperone->GetWorkingSeatedZeroPoseToRawTrackingPose(&outPose);
+    } else
+    if (universe == vr::TrackingUniverseSeated) {
+        const bool succeed = chaperone->GetWorkingSeatedZeroPoseToRawTrackingPose(&pose);
         if (!succeed) {
             log("Failed to GetWorkingSeatedZeroPoseToRawTrackingPose");
             return false;
         }
+    } else {
+        log("Unsupported universe");
+        return false;
     }
+
+    outPose.set(
+        pose.m[0][0], pose.m[1][0], pose.m[2][0], 0.0f,
+        pose.m[0][1], pose.m[1][1], pose.m[2][1], 0.0f,
+        pose.m[0][2], pose.m[1][2], pose.m[2][2], 0.0f,
+        pose.m[0][3], pose.m[1][3], pose.m[2][3], 1.0f
+    );
 
     return true;
 }
 
 bool getTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    vr::HmdMatrix34_t & outPose,
+    Matrix4 & outPose,
     unsigned & outCollisionBoundsCount,
     vr::HmdQuad_t* & outCollisionBounds
 ) {
@@ -122,21 +136,39 @@ bool getTrackingPose(
 
 void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    const vr::HmdMatrix34_t & pose,
+    const Matrix4 & pose,
     const bool doCommitPose
 ) {
+    vr::HmdMatrix34_t hmdPose;
+    hmdPose.m[0][0] = pose[0];
+    hmdPose.m[1][0] = pose[1];
+    hmdPose.m[2][0] = pose[2];
+    hmdPose.m[0][1] = pose[4];
+    hmdPose.m[1][1] = pose[5];
+    hmdPose.m[2][1] = pose[6];
+    hmdPose.m[0][2] = pose[8];
+    hmdPose.m[1][2] = pose[9];
+    hmdPose.m[2][2] = pose[10];
+    hmdPose.m[0][3] = pose[12];
+    hmdPose.m[1][3] = pose[13];
+    hmdPose.m[2][3] = pose[14];
+
     const auto chaperone = vr::VRChaperoneSetup();
     if (universe == vr::TrackingUniverseStanding) {
-        chaperone->SetWorkingStandingZeroPoseToRawTrackingPose(&pose);
+        chaperone->SetWorkingStandingZeroPoseToRawTrackingPose(&hmdPose);
+    } else
+    if (universe == vr::TrackingUniverseSeated) {
+        chaperone->SetWorkingSeatedZeroPoseToRawTrackingPose(&hmdPose);
     } else {
-        chaperone->SetWorkingSeatedZeroPoseToRawTrackingPose(&pose);
+        log("Unsupported universe");
+        return;
     }
     if (doCommitPose) commitPose();
 }
 
 void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    const vr::HmdMatrix34_t & pose,
+    const Matrix4 & pose,
     vr::HmdQuad_t * & collisionBounds,
     const unsigned collisionBoundsCount
 ) {

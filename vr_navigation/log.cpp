@@ -17,6 +17,6 @@ void log(const char * const msg) {
 	printf("\n");
 }
 
-void log(const vr::HmdVector3_t & pose) {
-    log("%.2f\t%.2f\t%.2f", pose.v[0], pose.v[1], pose.v[2]);
+void log(const Vector3 & pose) {
+    log("%.2f\t%.2f\t%.2f", pose[0], pose[1], pose[2]);
 }

@@ -1,17 +1,17 @@
 #pragma once
 
-#include <openvr.h>
-
 #define _USE_MATH_DEFINES
 #include <math.h>
+
+#include "shared/Matrices.h"
 
 float lerp(float a, float b, float weight);
 
 void lerp(
-	vr::HmdVector3_t a,
-	vr::HmdVector3_t b,
+	Vector3 a,
+	Vector3 b,
 	float weight,
-	vr::HmdVector3_t & outResult
+	Vector3 & outResult
 );
 
 float rad2deg(float rad);
