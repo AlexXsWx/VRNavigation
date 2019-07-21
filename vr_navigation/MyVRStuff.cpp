@@ -103,7 +103,13 @@ void MyVRStuff::updateButtonsStatus() {
 				log(this->dragStartDragPointPos);
 				log("%.2f", rad2deg(this->dragStartYaw));
 
-				if (!getTrackingPose(this->universe, this->dragStartTrackingPose)) {
+				if (
+					!getTrackingPose(
+						this->universe,
+						this->dragStartTrackingPose,
+						this->collisionBounds
+					)
+				) {
 					log("Failed to getTrackingPose");
 					// TODO: handle fail
 				}
@@ -124,6 +130,8 @@ void MyVRStuff::updatePosition() {
 	float dragYaw;
 	bool dragNDropIsActive = this->getDraggedPoint(dragPointPos, dragYaw);
 	if (!dragNDropIsActive) return;
+
+	// vr::VRChaperoneSetup()->RevertWorkingCopy();
 
 	Matrix4 pose(this->dragStartTrackingPose);
 
@@ -148,70 +156,56 @@ void MyVRStuff::updatePosition() {
 	Matrix4 translation;
 	translation.translate(
 		// add drag-n-drop delta
+		// TODO: understand why vector * matrix works in this case
 		(dragPointPos - this->dragStartDragPointPos) * poseWithoutTranslation
 	);
 
-	// FIXME: transform chaperone boundaries too
-	setTrackingPose(this->universe, pose * rotation * translation);
+	Matrix4 transform = rotation * translation;
 
-	// this->setPositionRotation(diff);
-}
+	pose = pose * transform;
 
-bool MyVRStuff::setPositionRotation(const Vector3 & diff) {
+	transform.invert();
 
-	// vr::VRChaperoneSetup()->RevertWorkingCopy();
+	// bounds
 
-	Matrix4 curPos;
-	unsigned collisionBoundsCount = 0;
-	vr::HmdQuad_t* collisionBounds = nullptr;
-
-	if (!getTrackingPose(this->universe, curPos/*, collisionBoundsCount, collisionBounds*/)) {
-		return false;
+	// Matrix4 temp;
+	// Vector3 diff = (-dragPointPos + this->dragStartDragPointPos) * poseWithoutTranslation;
+	// temp.translate(diff);
+	// rotation.identity();
+	// rotation.rotateY(180.0f / M_PI * (-dragYaw + this->dragStartYaw));
+	// // log("diff: %.2f\t%.2f\t%.2f", temp[12], temp[13], temp[14]);
+	std::vector<vr::HmdQuad_t> collisionBounds2(this->collisionBounds);
+	for (unsigned i = 0; i < collisionBounds2.size(); i++) {
+		for (unsigned j = 0; j < 4; j++) {
+			Vector4 vec(
+				collisionBounds2[i].vCorners[j].v[0],
+				collisionBounds2[i].vCorners[j].v[1],
+				collisionBounds2[i].vCorners[j].v[2],
+				1.0f
+			);
+			// if (i == 0 && j == 0) {
+			// 	log("v0: %.2f\t%.2f\t%.2f", vec[0], vec[1], vec[2]);
+			// }
+			// Vector4 vec2 = rotation * temp * vec;
+			Vector4 vec2 = transform * vec;
+			// if (i == 0 && j == 0) {
+			// 	log("v0': %.2f\t%.2f\t%.2f", vec2[0], vec2[1], vec2[2]);
+			// }
+			collisionBounds2[i].vCorners[j].v[0] = vec2[0];
+			collisionBounds2[i].vCorners[j].v[1] = vec2[1];
+			collisionBounds2[i].vCorners[j].v[2] = vec2[2];
+		}
 	}
 
 	// 0.413597      -1.271854       -1.985742
-	log("Current position: %f\t%f\t%f", curPos[12], curPos[13], curPos[14]);
+	// log("Current position: %f\t%f\t%f", curPos[12], curPos[13], curPos[14]);
 
-	// return false;
-
-	curPos[12] += diff[0];
-	curPos[13] += diff[1];
-	curPos[14] += diff[2];
-
-	// const float offsetX = 0.0f; // std::cos(angle)
-	// const float offsetY = 0.0f;
-	// const float offsetZ = 0.0f; // std::sin(angle)
-
-	// curPos.m[0][3] += curPos.m[0][0] * offsetX;
-	// curPos.m[1][3] += curPos.m[1][0] * offsetX;
-	// curPos.m[2][3] += curPos.m[2][0] * offsetX;
-
-	// curPos.m[0][3] += curPos.m[0][1] * offsetY;
-	// curPos.m[1][3] += curPos.m[1][1] * offsetY;
-	// curPos.m[2][3] += curPos.m[2][1] * offsetY;
-
-	// curPos.m[0][3] += curPos.m[0][2] * offsetZ;
-	// curPos.m[1][3] += curPos.m[1][2] * offsetZ;
-	// curPos.m[2][3] += curPos.m[2][2] * offsetZ;
-
-	// FIXME: init?
-	// vr::HmdMatrix34_t rotMat;
-	// for (unsigned b = 0; b < collisionBoundsCount; b++) {
-	// 	for (unsigned c = 0; c < 4; c++) {
-	// 		auto& corner = collisionBounds[b].vCorners[c];
-	// 		vr::HmdVector3_t newVal;
-	// 		// FIXME: set newVal value
-	// 		// corner = newVal;
-	// 	}
-	// }
-
-	setTrackingPose(this->universe, curPos/*, collisionBounds, collisionBoundsCount*/);
-
-	if (collisionBounds != nullptr) {
-		delete[] collisionBounds;
-	}
-
-	return true;
+	setTrackingPose(
+		this->universe,
+		pose
+		// FIXME: this updates actual files on disk, debounce this
+		, collisionBounds2
+	);
 }
 
 // High-level helpers

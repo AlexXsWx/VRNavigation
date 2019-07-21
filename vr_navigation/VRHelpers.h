@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vector>
 #include <openvr.h>
 
 #include "log.h"
@@ -28,8 +29,7 @@ bool getTrackingPose(
 bool getTrackingPose(
     const vr::TrackingUniverseOrigin universe,
     Matrix4 & outPose,
-    unsigned & outCollisionBoundsCount,
-    vr::HmdQuad_t* & outCollisionBounds
+    std::vector<vr::HmdQuad_t> & collisionBoundsVector
 );
 
 //
@@ -43,8 +43,7 @@ void setTrackingPose(
 void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
     const Matrix4 & pose,
-    vr::HmdQuad_t * & collisionBounds,
-    const unsigned collisionBoundsCount
+    const std::vector<vr::HmdQuad_t> & collisionBoundsVector
 );
 
 //

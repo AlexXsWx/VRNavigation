@@ -1,13 +1,14 @@
 #pragma once
 
-#include <openvr.h>
+#include <vector>
 #include <math.h>
+#include <openvr.h>
 
+#include "math.h"
 #include "log.h"
 #include "async.h"
-#include "math.h"
-#include "VRHelpers.h"
 #include "shared/Matrices.h"
+#include "VRHelpers.h"
 
 //
 
@@ -32,6 +33,7 @@ class MyVRStuff {
 
 	private:
 
+		std::vector<vr::HmdQuad_t> collisionBounds;
 		Matrix4 dragStartTrackingPose;
 		Vector3 dragStartDragPointPos;
 		// TODO: find a way to calculate this out of `dragStartDragPointPos`
@@ -54,7 +56,6 @@ class MyVRStuff {
 		void updateButtonsStatus();
 
 		void updatePosition();
-		bool setPositionRotation(const Vector3 & diff);
 
 		// High-level helpers
 

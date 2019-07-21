@@ -97,35 +97,39 @@ bool getTrackingPose(
 bool getTrackingPose(
     const vr::TrackingUniverseOrigin universe,
     Matrix4 & outPose,
-    unsigned & outCollisionBoundsCount,
-    vr::HmdQuad_t* & outCollisionBounds
+    std::vector<vr::HmdQuad_t> & collisionBoundsVector
 ) {
     const auto chaperone = vr::VRChaperoneSetup();
 
-    outCollisionBoundsCount = 0;
+    collisionBoundsVector.clear();
 
-    const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(
+    unsigned collisionBoundsCount = 0;
+
+    const bool something = chaperone->GetWorkingCollisionBoundsInfo(
         nullptr,
-        &outCollisionBoundsCount
+        &collisionBoundsCount
     );
-    if (!succeed) {
-        log("Failed to GetWorkingCollisionBoundsInfo");
-        outCollisionBoundsCount = 0;
-        // return false;
-    }
+    // if (!something) {
+    //     log("Failed to GetWorkingCollisionBoundsInfo %u", collisionBoundsCount);
+    //     collisionBoundsCount = 0;
+    //     // return false;
+    // }
     
-    if (outCollisionBoundsCount > 0) {
-        outCollisionBounds = new vr::HmdQuad_t[outCollisionBoundsCount];
+    if (collisionBoundsCount > 0) {
+        vr::HmdQuad_t* collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
         const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(
-            outCollisionBounds, &outCollisionBoundsCount
+            collisionBounds, &collisionBoundsCount
         );
-        if (!succeed) {
+        if (succeed) {
+            for (unsigned i = 0; i < collisionBoundsCount; i++) {
+                collisionBoundsVector.push_back(collisionBounds[i]);
+            }
+        } else {
             log("Failed to GetWorkingCollisionBoundsInfo");
-            outCollisionBoundsCount = 0;
-            delete[] outCollisionBounds;
-            outCollisionBounds = nullptr;
             // return false;
         }
+        delete[] collisionBounds;
+        collisionBounds = nullptr;
     }
 
     return getTrackingPose(universe, outPose);
@@ -168,16 +172,21 @@ void setTrackingPose(
 void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
     const Matrix4 & pose,
-    vr::HmdQuad_t * & collisionBounds,
-    const unsigned collisionBoundsCount
+    const std::vector<vr::HmdQuad_t> & collisionBoundsVector
 ) {
     setTrackingPose(universe, pose, false);
 
-    if (collisionBounds != nullptr) {
+    const unsigned collisionBoundsCount = static_cast<unsigned>(collisionBoundsVector.size());
+    if (collisionBoundsCount > 0) {
+        vr::HmdQuad_t* collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
+        for (unsigned i = 0; i < collisionBoundsCount; i++) {
+            collisionBounds[i] = collisionBoundsVector[i];
+        }
         vr::VRChaperoneSetup()->SetWorkingCollisionBoundsInfo(
             collisionBounds, collisionBoundsCount
         );
-    };
+        delete[] collisionBounds;
+    }
 
     commitPose();
 }
