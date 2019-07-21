@@ -105,15 +105,10 @@ bool getTrackingPose(
 
     unsigned collisionBoundsCount = 0;
 
-    const bool something = chaperone->GetWorkingCollisionBoundsInfo(
+    chaperone->GetWorkingCollisionBoundsInfo(
         nullptr,
         &collisionBoundsCount
     );
-    // if (!something) {
-    //     log("Failed to GetWorkingCollisionBoundsInfo %u", collisionBoundsCount);
-    //     collisionBoundsCount = 0;
-    //     // return false;
-    // }
     
     if (collisionBoundsCount > 0) {
         vr::HmdQuad_t* collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];

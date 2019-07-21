@@ -37,7 +37,6 @@ void MyVRStuff::stop() {
 // Tick
 
 void MyVRStuff::processEvents() {
-	// log("tick");
 	this->doProcessEvents();
 	this->updateButtonsStatus();
 	this->updatePosition();
@@ -156,44 +155,32 @@ void MyVRStuff::updatePosition() {
 	Matrix4 translation;
 	translation.translate(
 		// add drag-n-drop delta
-		// TODO: understand why vector * matrix works in this case
+		// TODO: understand why vector * matrix (as opposed to matrix * vector) works in this case
 		(dragPointPos - this->dragStartDragPointPos) * poseWithoutTranslation
 	);
 
+	//
+
 	Matrix4 transform = rotation * translation;
 
-	pose = pose * transform;
-
-	transform.invert();
+	Matrix4 inverseTransform(transform);
+	inverseTransform.invert();
 
 	// bounds
 
-	// Matrix4 temp;
-	// Vector3 diff = (-dragPointPos + this->dragStartDragPointPos) * poseWithoutTranslation;
-	// temp.translate(diff);
-	// rotation.identity();
-	// rotation.rotateY(180.0f / M_PI * (-dragYaw + this->dragStartYaw));
-	// // log("diff: %.2f\t%.2f\t%.2f", temp[12], temp[13], temp[14]);
-	std::vector<vr::HmdQuad_t> collisionBounds2(this->collisionBounds);
-	for (unsigned i = 0; i < collisionBounds2.size(); i++) {
+	std::vector<vr::HmdQuad_t> collisionBounds(this->collisionBounds);
+	for (unsigned i = 0; i < collisionBounds.size(); i++) {
 		for (unsigned j = 0; j < 4; j++) {
 			Vector4 vec(
-				collisionBounds2[i].vCorners[j].v[0],
-				collisionBounds2[i].vCorners[j].v[1],
-				collisionBounds2[i].vCorners[j].v[2],
+				collisionBounds[i].vCorners[j].v[0],
+				collisionBounds[i].vCorners[j].v[1],
+				collisionBounds[i].vCorners[j].v[2],
 				1.0f
 			);
-			// if (i == 0 && j == 0) {
-			// 	log("v0: %.2f\t%.2f\t%.2f", vec[0], vec[1], vec[2]);
-			// }
-			// Vector4 vec2 = rotation * temp * vec;
-			Vector4 vec2 = transform * vec;
-			// if (i == 0 && j == 0) {
-			// 	log("v0': %.2f\t%.2f\t%.2f", vec2[0], vec2[1], vec2[2]);
-			// }
-			collisionBounds2[i].vCorners[j].v[0] = vec2[0];
-			collisionBounds2[i].vCorners[j].v[1] = vec2[1];
-			collisionBounds2[i].vCorners[j].v[2] = vec2[2];
+			vec = inverseTransform * vec;
+			collisionBounds[i].vCorners[j].v[0] = vec[0];
+			collisionBounds[i].vCorners[j].v[1] = vec[1];
+			collisionBounds[i].vCorners[j].v[2] = vec[2];
 		}
 	}
 
@@ -202,9 +189,9 @@ void MyVRStuff::updatePosition() {
 
 	setTrackingPose(
 		this->universe,
-		pose
-		// FIXME: this updates actual files on disk, debounce this
-		, collisionBounds2
+		pose * transform
+		// FIXME: this updates actual config files on disk, debounce this or avoid alltogether
+		// , collisionBounds
 	);
 }
 
