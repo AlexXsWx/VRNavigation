@@ -7,6 +7,7 @@
 #include "async.h"
 #include "math.h"
 #include "VRHelpers.h"
+#include "shared/Matrices.h"
 
 //
 
@@ -31,7 +32,8 @@ class MyVRStuff {
 
 	private:
 
-		vr::HmdVector3_t dragStartPos;
+		vr::HmdMatrix34_t dragStartPose;
+		vr::HmdVector3_t dragStartDragPointPos;
 		float dragStartYaw;
 
 		Timer timer;
