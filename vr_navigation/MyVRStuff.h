@@ -20,6 +20,14 @@ struct MyControllerState {
 
 //
 
+// TODO: enter drag on double-click
+// TODO: allow to rotate with 1 controller
+// TODO: auto-assign indices
+// TODO: a way to reset
+// TODO: a way to scale factor
+// TODO: save initial settings
+// TODO: persistent storage
+// TODO: config files
 class MyVRStuff {
 
 	public:
