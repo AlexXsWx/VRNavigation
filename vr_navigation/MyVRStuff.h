@@ -5,12 +5,12 @@
 #include <math.h>
 #include <openvr.h>
 
-#include "math.h"
-#include "log.h"
-#include "async.h"
+#include "helpers/math.h"
+#include "helpers/log.h"
+#include "helpers/async.h"
 #include "shared/Matrices.h"
-#include "VRHelpers.h"
-#include "vectorHelpers.h"
+#include "helpers/VRHelpers.h"
+#include "helpers/vectorHelpers.h"
 
 //
 

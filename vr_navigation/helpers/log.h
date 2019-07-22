@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include "shared/Matrices.h"
+#include "../shared/Matrices.h"
 
 void logError(const char* const msg);
 void log(const std::string& msg);

@@ -27,16 +27,16 @@
     <ClInclude Include="MyVRStuff.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="async.h">
+    <ClInclude Include="helpers\async.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="log.h">
+    <ClInclude Include="helpers\log.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="math.h">
+    <ClInclude Include="helpers\math.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VRHelpers.h">
+    <ClInclude Include="helpers\VRHelpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="shared\Matrices.h">
@@ -45,7 +45,7 @@
     <ClInclude Include="shared\Vectors.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="vectorHelpers.h">
+    <ClInclude Include="helpers\vectorHelpers.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -56,25 +56,25 @@
     <ClCompile Include="vr_navigation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="log.cpp">
+    <ClCompile Include="helpers\log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="async.cpp">
+    <ClCompile Include="helpers\async.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MyVRStuff.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="math.cpp">
+    <ClCompile Include="helpers\math.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="VRHelpers.cpp">
+    <ClCompile Include="helpers\VRHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="shared\Matrices.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="vectorHelpers.cpp">
+    <ClCompile Include="helpers\vectorHelpers.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

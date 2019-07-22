@@ -146,22 +146,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="async.h" />
-    <ClInclude Include="math.h" />
-    <ClInclude Include="log.h" />
+    <ClInclude Include="helpers\async.h" />
+    <ClInclude Include="helpers\math.h" />
+    <ClInclude Include="helpers\log.h" />
     <ClInclude Include="MyVRStuff.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="shared\Matrices.h" />
     <ClInclude Include="shared\Vectors.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
-    <ClInclude Include="vectorHelpers.h" />
-    <ClInclude Include="VRHelpers.h" />
+    <ClInclude Include="helpers\vectorHelpers.h" />
+    <ClInclude Include="helpers\VRHelpers.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="async.cpp" />
-    <ClCompile Include="log.cpp" />
-    <ClCompile Include="math.cpp" />
+    <ClCompile Include="helpers\async.cpp" />
+    <ClCompile Include="helpers\log.cpp" />
+    <ClCompile Include="helpers\math.cpp" />
     <ClCompile Include="MyVRStuff.cpp" />
     <ClCompile Include="shared\Matrices.cpp" />
     <ClCompile Include="stdafx.cpp">
@@ -170,8 +170,8 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
-    <ClCompile Include="vectorHelpers.cpp" />
-    <ClCompile Include="VRHelpers.cpp" />
+    <ClCompile Include="helpers\vectorHelpers.cpp" />
+    <ClCompile Include="helpers\VRHelpers.cpp" />
     <ClCompile Include="vr_navigation.cpp" />
   </ItemGroup>
   <ItemGroup>

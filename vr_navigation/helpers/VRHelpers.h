@@ -4,7 +4,7 @@
 #include <openvr.h>
 
 #include "log.h"
-#include "shared/Matrices.h"
+#include "../shared/Matrices.h"
 
 //
 

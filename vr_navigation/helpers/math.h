@@ -3,7 +3,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
-#include "shared/Matrices.h"
+#include "../shared/Matrices.h"
 
 float lerp(float a, float b, float weight);
 
