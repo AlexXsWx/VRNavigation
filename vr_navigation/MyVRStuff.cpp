@@ -74,53 +74,65 @@ void MyVRStuff::doProcessEvents() {
 
 void MyVRStuff::updateButtonsStatus() {
 
-	const bool leftDragging  = this->getIsDragging(this->leftControllerState.index);
-	const bool rightDragging = this->getIsDragging(this->rightControllerState.index);
+	if (
+		std::all_of(
+			this->controllerStates.begin(),
+			this->controllerStates.end(),
+			[](const auto & state) { return state.wasDragging == state.dragging; }
+		)
+	) {
+		return;
+	}
+
+	log("Button status changed");
 
 	if (
-		leftDragging  != this->leftControllerState.wasDragging ||
-		rightDragging != this->rightControllerState.wasDragging
+		!std::any_of(
+			this->controllerStates.begin(),
+			this->controllerStates.end(),
+			[](const auto & state) { return state.dragging; }
+		)
 	) {
-		log(
-			"drag changed\n%i: %i -> %i\n%i: %i -> %i",
-			this->leftControllerState.index,  this->leftControllerState.wasDragging,  leftDragging,
-			this->rightControllerState.index, this->rightControllerState.wasDragging, rightDragging
-		);
+		return;
+	}
 
-		this->leftControllerState.wasDragging  = leftDragging;
-		this->rightControllerState.wasDragging = rightDragging;
+	log("Something is still dragging");
 
-		if (leftDragging || rightDragging) {
-			const bool succeed = this->getDraggedPoint(
-				this->dragStartDragPointPos,
-				this->dragStartYaw
-			);
-			float whatever;
-			// FIXME: handle fail
-			this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, false);
-			if (succeed) {
-				log(this->dragStartDragPointPos);
-				log("%.2f", rad2deg(this->dragStartYaw));
+	for (unsigned i = 0; i < this->controllerStates.size(); i++) {
+		this->controllerStates[i].wasDragging = this->controllerStates[i].dragging;
+	}
 
-				if (
-					!getTrackingPose(
-						this->universe,
-						this->dragStartTrackingPose,
-						this->collisionBounds
-					)
-				) {
-					log("Failed to getTrackingPose");
-					// TODO: handle fail
-				}
-			}
+	const bool succeed = this->getDraggedPoint(
+		this->dragStartDragPointPos,
+		this->dragStartYaw
+	);
+	float whatever;
+	// FIXME: handle fail
+	this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, false);
+	if (succeed) {
+		log(this->dragStartDragPointPos);
+		log("%.2f", rad2deg(this->dragStartYaw));
+
+		if (
+			!getTrackingPose(
+				this->universe,
+				this->dragStartTrackingPose,
+				this->collisionBounds
+			)
+		) {
+			log("Failed to getTrackingPose");
+			// TODO: handle fail
 		}
 	}
 }
 
 void MyVRStuff::updatePosition() {
 	if (
-		!this->leftControllerState.dragging &&
-		!this->rightControllerState.dragging
+		std::find_if(
+			this->controllerStates.begin(),
+			this->controllerStates.end(),
+			[](const auto & state) { return state.dragging; }
+		) == this->controllerStates.end()
 	) {
 		return;
 	}
@@ -205,44 +217,43 @@ bool MyVRStuff::getDraggedPoint(
 	const vr::TrackingUniverseOrigin universe = (
 		absolute ? vr::TrackingUniverseRawAndUncalibrated : this->universe
 	);
-	if (this->leftControllerState.dragging && !this->rightControllerState.dragging) {
+
+	std::vector<MyControllerState> dragged;
+
+	std::copy_if(
+		this->controllerStates.begin(),
+		this->controllerStates.end(),
+		std::back_inserter(dragged),
+		[](const auto & state) { return state.dragging; }
+	);
+
+	if (dragged.size() == 0) return false;
+
+	if (dragged.size() == 1) {
 		outDragYaw = 0;
-		return getControllerPosition(
+		return getControllerPosition(this->vrSystem, universe, dragged[0].index, outDragPoint);
+	}
+
+	if (dragged.size() == 2) {
+		Vector3 poseOne;
+		Vector3 poseTwo;
+		const bool succeedOne = getControllerPosition(
 			this->vrSystem,
 			universe,
-			this->leftControllerState.index,
-			outDragPoint
+			dragged[0].index,
+			poseOne
 		);
-	} else
-	if (!this->leftControllerState.dragging && this->rightControllerState.dragging) {
-		outDragYaw = 0;
-		return getControllerPosition(
+		const bool succeedTwo = getControllerPosition(
 			this->vrSystem,
 			universe,
-			this->rightControllerState.index,
-			outDragPoint
+			dragged[1].index,
+			poseTwo
 		);
-	} else
-	if (this->leftControllerState.dragging && this->rightControllerState.dragging) {
-		Vector3 leftPose;
-		Vector3 rightPose;
-		const bool leftSucceed = getControllerPosition(
-			this->vrSystem,
-			universe,
-			this->leftControllerState.index,
-			leftPose
-		);
-		const bool rightSucceed = getControllerPosition(
-			this->vrSystem,
-			universe,
-			this->rightControllerState.index,
-			rightPose
-		);
-		if (!leftSucceed || !rightSucceed) return false;
-		lerp(leftPose, rightPose, 0.5, outDragPoint);
+		if (!succeedOne || !succeedTwo) return false;
+		lerp(poseOne, poseTwo, 0.5, outDragPoint);
 		outDragYaw = atan2(
-			rightPose[0] - leftPose[0],
-			rightPose[2] - leftPose[2]
+			poseTwo[0] - poseOne[0],
+			poseTwo[2] - poseOne[2]
 		);
 		return true;
 	}
@@ -258,24 +269,19 @@ bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState
 }
 
 void MyVRStuff::setDragging(vr::TrackedDeviceIndex_t index, bool dragging) {
-	if (this->leftControllerState.index == index) {
-		this->leftControllerState.dragging = dragging;
-	} else
-	if (this->rightControllerState.index == index) {
-		this->rightControllerState.dragging = dragging;
-	} else {
-		log("Unexpected index %i", index);
+	if (index == -1) {
+		log("Ignoring dragging of -1");
+		return;
 	}
-}
 
-bool MyVRStuff::getIsDragging(vr::TrackedDeviceIndex_t index) const {
-	if (this->leftControllerState.index == index) {
-		return this->leftControllerState.dragging;
-	} else
-	if (this->rightControllerState.index == index) {
-		return this->rightControllerState.dragging;
+	const auto it = std::find_if(
+		this->controllerStates.begin(),
+		this->controllerStates.end(),
+		[&index](const auto & arg) { return arg.index == index; }
+	);
+	if (it != this->controllerStates.end()) {
+		it->dragging = dragging;
 	} else {
-		log("Unexpected index %i", index);
-		return false;
+		this->controllerStates.push_back(MyControllerState { index, dragging, false });
 	}
 }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <algorithm>
 #include <math.h>
 #include <openvr.h>
 
@@ -22,7 +23,6 @@ struct MyControllerState {
 
 // TODO: enter drag on double-click
 // TODO: allow to rotate with 1 controller
-// TODO: auto-assign indices
 // TODO: a way to reset
 // TODO: a way to scale factor
 // TODO: save initial settings
@@ -55,9 +55,7 @@ class MyVRStuff {
 		const vr::TrackingUniverseOrigin universe = vr::TrackingUniverseStanding;
 		const vr::EVRButtonId dragButton = vr::k_EButton_Grip;
 
-		// FIXME: find a way to obtain correct index
-		MyControllerState leftControllerState  { 3 };
-		MyControllerState rightControllerState { 4 };
+		std::vector<MyControllerState> controllerStates;
 
 		void processEvents();
 		void doProcessEvents();
@@ -75,6 +73,5 @@ class MyVRStuff {
 		bool isDragButtonHeld(const vr::VRControllerState_t & controllerState) const;
 
 		void setDragging(vr::TrackedDeviceIndex_t index, bool dragging);
-		bool getIsDragging(vr::TrackedDeviceIndex_t index) const;
 
 };
