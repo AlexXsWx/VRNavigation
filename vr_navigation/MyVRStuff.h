@@ -10,6 +10,7 @@
 #include "async.h"
 #include "shared/Matrices.h"
 #include "VRHelpers.h"
+#include "vectorHelpers.h"
 
 //
 

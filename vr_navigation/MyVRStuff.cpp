@@ -74,32 +74,30 @@ void MyVRStuff::doProcessEvents() {
 
 void MyVRStuff::updateButtonsStatus() {
 
-	if (
-		std::all_of(
-			this->controllerStates.begin(),
-			this->controllerStates.end(),
-			[](const auto & state) { return state.wasDragging == state.dragging; }
-		)
-	) {
+	if (every(
+		this->controllerStates,
+		[](const auto & state) { return state.wasDragging == state.dragging; }
+	)) {
 		return;
 	}
 
 	log("Button status changed");
 
-	if (
-		!std::any_of(
-			this->controllerStates.begin(),
-			this->controllerStates.end(),
-			[](const auto & state) { return state.dragging; }
-		)
-	) {
+	if (!some(
+		this->controllerStates,
+		[](const auto & state) { return state.dragging; }
+	)) {
 		return;
 	}
 
 	log("Something is still dragging");
 
-	for (unsigned i = 0; i < this->controllerStates.size(); i++) {
-		this->controllerStates[i].wasDragging = this->controllerStates[i].dragging;
+	for (
+		auto state = this->controllerStates.begin();
+		state != this->controllerStates.end();
+		state++
+	) {
+		state->wasDragging = state->dragging;
 	}
 
 	const bool succeed = this->getDraggedPoint(
@@ -128,11 +126,10 @@ void MyVRStuff::updateButtonsStatus() {
 
 void MyVRStuff::updatePosition() {
 	if (
-		std::find_if(
-			this->controllerStates.begin(),
-			this->controllerStates.end(),
+		find(
+			this->controllerStates,
 			[](const auto & state) { return state.dragging; }
-		) == this->controllerStates.end()
+		) == nullptr
 	) {
 		return;
 	}
@@ -158,7 +155,7 @@ void MyVRStuff::updatePosition() {
 		// move to point of rotation
 		.translate(-this->dragStartDragPointPosForRot)
 		// rotate
-		.rotateY(180.0f / M_PI * (dragYaw - this->dragStartYaw))
+		.rotateY(180.0f / float(M_PI) * (dragYaw - this->dragStartYaw))
 		// unmove from point of rotation
 		.translate(this->dragStartDragPointPosForRot);
 
@@ -218,47 +215,42 @@ bool MyVRStuff::getDraggedPoint(
 		absolute ? vr::TrackingUniverseRawAndUncalibrated : this->universe
 	);
 
-	std::vector<MyControllerState> dragged;
-
-	std::copy_if(
-		this->controllerStates.begin(),
-		this->controllerStates.end(),
-		std::back_inserter(dragged),
+	const auto dragged = filter(
+		this->controllerStates,
 		[](const auto & state) { return state.dragging; }
 	);
 
-	if (dragged.size() == 0) return false;
+	if (dragged.size() <= 0) return false;
 
 	if (dragged.size() == 1) {
 		outDragYaw = 0;
 		return getControllerPosition(this->vrSystem, universe, dragged[0].index, outDragPoint);
 	}
 
-	if (dragged.size() == 2) {
-		Vector3 poseOne;
-		Vector3 poseTwo;
-		const bool succeedOne = getControllerPosition(
-			this->vrSystem,
-			universe,
-			dragged[0].index,
-			poseOne
-		);
-		const bool succeedTwo = getControllerPosition(
-			this->vrSystem,
-			universe,
-			dragged[1].index,
-			poseTwo
-		);
-		if (!succeedOne || !succeedTwo) return false;
-		lerp(poseOne, poseTwo, 0.5, outDragPoint);
-		outDragYaw = atan2(
-			poseTwo[0] - poseOne[0],
-			poseTwo[2] - poseOne[2]
-		);
-		return true;
+	if (dragged.size() > 2) {
+		log("Ignoring %i / %i", dragged.size() - 2, dragged.size());
 	}
-
-	return false;
+	Vector3 poseOne;
+	Vector3 poseTwo;
+	const bool succeedOne = getControllerPosition(
+		this->vrSystem,
+		universe,
+		dragged[0].index,
+		poseOne
+	);
+	const bool succeedTwo = getControllerPosition(
+		this->vrSystem,
+		universe,
+		dragged[1].index,
+		poseTwo
+	);
+	if (!succeedOne || !succeedTwo) return false;
+	lerp(poseOne, poseTwo, 0.5, outDragPoint);
+	outDragYaw = atan2(
+		poseTwo[0] - poseOne[0],
+		poseTwo[2] - poseOne[2]
+	);
+	return true;
 }
 
 bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState) const {
@@ -274,13 +266,12 @@ void MyVRStuff::setDragging(vr::TrackedDeviceIndex_t index, bool dragging) {
 		return;
 	}
 
-	const auto it = std::find_if(
-		this->controllerStates.begin(),
-		this->controllerStates.end(),
+	MyControllerState * state = find(
+		this->controllerStates,
 		[&index](const auto & arg) { return arg.index == index; }
 	);
-	if (it != this->controllerStates.end()) {
-		it->dragging = dragging;
+	if (state != nullptr) {
+		state->dragging = dragging;
 	} else {
 		this->controllerStates.push_back(MyControllerState { index, dragging, false });
 	}
