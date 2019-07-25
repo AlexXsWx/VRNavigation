@@ -16,7 +16,7 @@
 
 struct MyControllerState {
 	vr::TrackedDeviceIndex_t index;
-	bool dragging = false;
+	bool dragging    = false;
 	bool wasDragging = false;
 };
 
@@ -25,7 +25,6 @@ struct MyControllerState {
 // TODO: enter drag on double-click
 // TODO: allow to rotate with 1 controller
 // TODO: a way to reset
-// TODO: save initial settings
 // TODO: persistent storage
 // TODO: config files
 class MyVRStuff {
@@ -41,33 +40,50 @@ class MyVRStuff {
 
 	private:
 
-		std::vector<vr::HmdQuad_t> collisionBounds;
+		// Params
+
+		const vr::TrackingUniverseOrigin universe   = vr::TrackingUniverseStanding;
+		const vr::EVRButtonId            dragButton = vr::k_EButton_Grip;
+
+		//
+
+		vr::IVRSystem* vrSystem = nullptr;
+
+		Timer timer;
+
+		// Initial
+
+		std::vector<vr::HmdQuad_t> initialCollisionBounds;
+		Matrix4 initialTrackingPoseStanding;
+		Matrix4 initialTrackingPoseSeated;
+
+		void MyVRStuff::backUpInitial();
+		void MyVRStuff::restoreBackup(bool write = false);
+
+		// Drag start
+
+		std::vector<vr::HmdQuad_t> dragStartCollisionBounds;
 		Matrix4 dragStartTrackingPose;
 		Vector3 dragStartDragPointPos;
 		// TODO: find a way to calculate this out of `dragStartDragPointPos`
 		Vector3 dragStartDragPointPosForRot;
 		float dragStartYaw = 0.0f;
-
-		float dragScale     = 1.0f;
 		float dragStartSize = 1.0f;
-		float dragSize      = 1.0f;
 
-		Timer timer;
+		// Drag update
 
-		vr::IVRSystem* vrSystem = nullptr;
-
-		const vr::TrackingUniverseOrigin universe = vr::TrackingUniverseStanding;
-		const vr::EVRButtonId dragButton = vr::k_EButton_Grip;
+		float dragScale = 1.0f;
+		float dragSize  = 1.0f;
 
 		std::vector<MyControllerState> controllerStates;
+		void setDragging(vr::TrackedDeviceIndex_t index, bool dragging);
+
+		//
 
 		void processEvents();
 		void doProcessEvents();
 		bool updateButtonsStatus();
-
 		void updatePosition();
-
-		// High-level helpers
 
 		bool getDraggedPoint(
 			Vector3 & outDragPoint,
@@ -75,8 +91,5 @@ class MyVRStuff {
 			float & outDragSize,
 			bool absolute = true
 		) const;
-		bool isDragButtonHeld(const vr::VRControllerState_t & controllerState) const;
-
-		void setDragging(vr::TrackedDeviceIndex_t index, bool dragging);
 
 };

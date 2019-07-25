@@ -94,48 +94,10 @@ bool getTrackingPose(
     return true;
 }
 
-bool getTrackingPose(
-    const vr::TrackingUniverseOrigin universe,
-    Matrix4 & outPose,
-    std::vector<vr::HmdQuad_t> & collisionBoundsVector
-) {
-    const auto chaperone = vr::VRChaperoneSetup();
-
-    collisionBoundsVector.clear();
-
-    unsigned collisionBoundsCount = 0;
-
-    chaperone->GetWorkingCollisionBoundsInfo(
-        nullptr,
-        &collisionBoundsCount
-    );
-    
-    if (collisionBoundsCount > 0) {
-        vr::HmdQuad_t* collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
-        const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(
-            collisionBounds, &collisionBoundsCount
-        );
-        if (succeed) {
-            for (unsigned i = 0; i < collisionBoundsCount; i++) {
-                collisionBoundsVector.push_back(collisionBounds[i]);
-            }
-        } else {
-            log("Failed to GetWorkingCollisionBoundsInfo");
-            // return false;
-        }
-        delete[] collisionBounds;
-        collisionBounds = nullptr;
-    }
-
-    return getTrackingPose(universe, outPose);
-}
-
-//
-
 void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
     const Matrix4 & pose,
-    const bool doCommitPose
+    const bool callCommitPose
 ) {
     vr::HmdMatrix34_t hmdPose;
     hmdPose.m[0][0] = pose[0];
@@ -161,16 +123,47 @@ void setTrackingPose(
         log("Unsupported universe");
         return;
     }
-    if (doCommitPose) commitPose();
+    if (callCommitPose) commitPose();
 }
 
-void setTrackingPose(
-    const vr::TrackingUniverseOrigin universe,
-    const Matrix4 & pose,
-    const std::vector<vr::HmdQuad_t> & collisionBoundsVector
-) {
-    setTrackingPose(universe, pose, false);
+// Collision bounds get/set
 
+bool getCollisionBounds(std::vector<vr::HmdQuad_t> & collisionBoundsVector) {
+    const auto chaperone = vr::VRChaperoneSetup();
+
+    collisionBoundsVector.clear();
+
+    unsigned collisionBoundsCount = 0;
+
+    chaperone->GetWorkingCollisionBoundsInfo(
+        nullptr,
+        &collisionBoundsCount
+    );
+    
+    if (collisionBoundsCount > 0) {
+        vr::HmdQuad_t* collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
+        const bool succeed = chaperone->GetWorkingCollisionBoundsInfo(
+            collisionBounds, &collisionBoundsCount
+        );
+        if (succeed) {
+            for (unsigned i = 0; i < collisionBoundsCount; i++) {
+                collisionBoundsVector.push_back(collisionBounds[i]);
+            }
+        } else {
+            log("Failed to GetWorkingCollisionBoundsInfo");
+            return false;
+        }
+        delete[] collisionBounds;
+        collisionBounds = nullptr;
+    }
+
+    return true;
+}
+
+void setCollisionBounds(
+    const std::vector<vr::HmdQuad_t> & collisionBoundsVector,
+    const bool callCommitPose
+) {
     const unsigned collisionBoundsCount = static_cast<unsigned>(collisionBoundsVector.size());
     if (collisionBoundsCount > 0) {
         vr::HmdQuad_t* collisionBounds = new vr::HmdQuad_t[collisionBoundsCount];
@@ -182,21 +175,23 @@ void setTrackingPose(
         );
         delete[] collisionBounds;
     }
-
-    commitPose();
+    if (callCommitPose) commitPose();
 }
 
 //
 
-void commitPose() {
+void commitPose(bool write) {
     const auto chaperone = vr::VRChaperoneSetup();
 
-    // if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
-    //  return true;
-    // } else {
-    //  log("Failed to CommitWorkingCopy");
-    //  return false;
-    // }
+    if (!write) {
+        chaperone->ShowWorkingSetPreview();
+        return;
+    }
 
-    chaperone->ShowWorkingSetPreview();
+    log("Commiting working copy...");
+    if (chaperone->CommitWorkingCopy(vr::EChaperoneConfigFile_Live)) {
+        log("Success");
+    } else {
+        log("Failed to CommitWorkingCopy");
+    }
 }

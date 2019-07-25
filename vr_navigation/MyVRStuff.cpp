@@ -18,17 +18,40 @@ void MyVRStuff::start() {
 
 	this->vrSystem = initVrSystem();
 
+	backUpInitial();
+
 	this->timer.setInterval(
 		[this]() mutable { this->processEvents(); },
 		16
 	);
 }
 
+// Backup
+
+void MyVRStuff::backUpInitial() {
+	getTrackingPose(vr::TrackingUniverseStanding, this->initialTrackingPoseStanding);
+	getTrackingPose(vr::TrackingUniverseSeated,   this->initialTrackingPoseSeated);
+	getCollisionBounds(this->initialCollisionBounds);
+}
+
+void MyVRStuff::restoreBackup(bool write) {
+	vr::VRChaperoneSetup()->RevertWorkingCopy();
+	log("Would restore initial");
+	return;
+	setTrackingPose(vr::TrackingUniverseSeated,   this->initialTrackingPoseSeated);
+	setTrackingPose(vr::TrackingUniverseStanding, this->initialTrackingPoseStanding);
+	if (write) setCollisionBounds(this->initialCollisionBounds);
+	commitPose(write);
+}
+
+//
+
 void MyVRStuff::stop() {
 	this->timer.stop();
 
 	if (this->vrSystem != nullptr) {
 		vr::VRChaperoneSetup()->HideWorkingSetPreview();
+		// restoreBackup(true);
 		this->vrSystem = nullptr;
 		vr::VR_Shutdown();
 	}
@@ -120,13 +143,10 @@ bool MyVRStuff::updateButtonsStatus() {
 		log("%.2f", rad2deg(this->dragStartYaw));
 
 		if (
-			!getTrackingPose(
-				this->universe,
-				this->dragStartTrackingPose,
-				this->collisionBounds
-			)
+			!getTrackingPose(this->universe, this->dragStartTrackingPose) ||
+			!getCollisionBounds(this->dragStartCollisionBounds)
 		) {
-			log("Failed to getTrackingPose");
+			log("Failed to getTrackingPose or getCollisionBounds");
 			// TODO: handle fail
 		}
 	}
@@ -179,7 +199,7 @@ void MyVRStuff::updatePosition() {
 
 	// bounds
 
-	std::vector<vr::HmdQuad_t> collisionBounds(this->collisionBounds);
+	std::vector<vr::HmdQuad_t> collisionBounds(this->dragStartCollisionBounds);
 	for (unsigned i = 0; i < collisionBounds.size(); i++) {
 		for (unsigned j = 0; j < 4; j++) {
 			Vector4 vec(
@@ -198,12 +218,10 @@ void MyVRStuff::updatePosition() {
 	// 0.413597      -1.271854       -1.985742
 	// log("Current position: %f\t%f\t%f", curPos[12], curPos[13], curPos[14]);
 
-	setTrackingPose(
-		this->universe,
-		pose * transform
-		// FIXME: this updates actual config files on disk, debounce this or avoid alltogether
-		// , collisionBounds
-	);
+	setTrackingPose(this->universe, pose * transform);
+	// FIXME: this updates actual config files on disk, debounce this or avoid alltogether
+	// setCollisionBounds(collisionBounds);
+	commitPose();
 }
 
 // High-level helpers
@@ -256,13 +274,6 @@ bool MyVRStuff::getDraggedPoint(
 		poseTwo[2] - poseOne[2]
 	);
 	return true;
-}
-
-bool MyVRStuff::isDragButtonHeld(const vr::VRControllerState_t & controllerState) const {
-	return 0 != (
-		controllerState.ulButtonPressed &
-		vr::ButtonMaskFromId(this->dragButton)
-	);
 }
 
 void MyVRStuff::setDragging(vr::TrackedDeviceIndex_t index, bool dragging) {

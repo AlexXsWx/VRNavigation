@@ -26,26 +26,21 @@ bool getTrackingPose(
     Matrix4 & outPose
 );
 
-bool getTrackingPose(
+void setTrackingPose(
     const vr::TrackingUniverseOrigin universe,
-    Matrix4 & outPose,
-    std::vector<vr::HmdQuad_t> & collisionBoundsVector
+    const Matrix4 & pose,
+    const bool callCommitPose = false
+);
+
+// Collision bounds get/set
+
+bool getCollisionBounds(std::vector<vr::HmdQuad_t> & collisionBoundsVector);
+
+void setCollisionBounds(
+    const std::vector<vr::HmdQuad_t> & collisionBoundsVector,
+    const bool callCommitPose = false
 );
 
 //
 
-void setTrackingPose(
-    const vr::TrackingUniverseOrigin universe,
-    const Matrix4 & pose,
-    const bool doCommitPose = true
-);
-
-void setTrackingPose(
-    const vr::TrackingUniverseOrigin universe,
-    const Matrix4 & pose,
-    const std::vector<vr::HmdQuad_t> & collisionBoundsVector
-);
-
-//
-
-void commitPose();
+void commitPose(bool write = false);
