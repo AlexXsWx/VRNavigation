@@ -25,7 +25,6 @@ struct MyControllerState {
 // TODO: enter drag on double-click
 // TODO: allow to rotate with 1 controller
 // TODO: a way to reset
-// TODO: a way to scale factor
 // TODO: save initial settings
 // TODO: persistent storage
 // TODO: config files
@@ -47,7 +46,11 @@ class MyVRStuff {
 		Vector3 dragStartDragPointPos;
 		// TODO: find a way to calculate this out of `dragStartDragPointPos`
 		Vector3 dragStartDragPointPosForRot;
-		float dragStartYaw;
+		float dragStartYaw = 0.0f;
+
+		float dragScale     = 1.0f;
+		float dragStartSize = 1.0f;
+		float dragSize      = 1.0f;
 
 		Timer timer;
 
@@ -60,7 +63,7 @@ class MyVRStuff {
 
 		void processEvents();
 		void doProcessEvents();
-		void updateButtonsStatus();
+		bool updateButtonsStatus();
 
 		void updatePosition();
 
@@ -69,6 +72,7 @@ class MyVRStuff {
 		bool getDraggedPoint(
 			Vector3 & outDragPoint,
 			float & outDragYaw,
+			float & outDragSize,
 			bool absolute = true
 		) const;
 		bool isDragButtonHeld(const vr::VRControllerState_t & controllerState) const;

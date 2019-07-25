@@ -38,8 +38,9 @@ void MyVRStuff::stop() {
 
 void MyVRStuff::processEvents() {
 	this->doProcessEvents();
-	this->updateButtonsStatus();
-	this->updatePosition();
+	if (this->updateButtonsStatus()) {
+		this->updatePosition();
+	}
 }
 
 void MyVRStuff::doProcessEvents() {
@@ -72,41 +73,48 @@ void MyVRStuff::doProcessEvents() {
 	// }
 }
 
-void MyVRStuff::updateButtonsStatus() {
+bool MyVRStuff::updateButtonsStatus() {
 
-	if (every(
-		this->controllerStates,
-		[](const auto & state) { return state.wasDragging == state.dragging; }
-	)) {
-		return;
-	}
-
-	log("Button status changed");
-
-	if (!some(
-		this->controllerStates,
-		[](const auto & state) { return state.dragging; }
-	)) {
-		return;
-	}
-
-	log("Something is still dragging");
+	bool somethingChanged = false;
+	bool somethingDragging = false;
+	bool somethingStoppedDragging = false;
 
 	for (
 		auto state = this->controllerStates.begin();
 		state != this->controllerStates.end();
 		state++
 	) {
+		somethingChanged  = somethingChanged  || state->dragging != state->wasDragging;
+		somethingDragging = somethingDragging || state->dragging;
+		somethingStoppedDragging = somethingStoppedDragging || (
+			state->wasDragging && !state->dragging
+		);
+
 		state->wasDragging = state->dragging;
+	}
+
+	if (!somethingChanged) return somethingDragging;
+
+	log("Dragging changed: dragging = %i", somethingDragging);
+
+	if (!somethingDragging) {
+		this->dragScale = 1.0f;
+		return false;
+	}
+
+	if (somethingStoppedDragging) {
+		this->dragScale *= this->dragSize / this->dragStartSize;
 	}
 
 	const bool succeed = this->getDraggedPoint(
 		this->dragStartDragPointPos,
-		this->dragStartYaw
+		this->dragStartYaw,
+		this->dragStartSize
 	);
+	this->dragSize = this->dragStartSize;
 	float whatever;
 	// FIXME: handle fail
-	this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, false);
+	this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, whatever, false);
 	if (succeed) {
 		log(this->dragStartDragPointPos);
 		log("%.2f", rad2deg(this->dragStartYaw));
@@ -122,21 +130,15 @@ void MyVRStuff::updateButtonsStatus() {
 			// TODO: handle fail
 		}
 	}
+
+	return true;
 }
 
 void MyVRStuff::updatePosition() {
-	if (
-		find(
-			this->controllerStates,
-			[](const auto & state) { return state.dragging; }
-		) == nullptr
-	) {
-		return;
-	}
 
 	Vector3 dragPointPos;
 	float dragYaw;
-	bool dragNDropIsActive = this->getDraggedPoint(dragPointPos, dragYaw);
+	bool dragNDropIsActive = this->getDraggedPoint(dragPointPos, dragYaw, this->dragSize);
 	if (!dragNDropIsActive) return;
 
 	// vr::VRChaperoneSetup()->RevertWorkingCopy();
@@ -155,7 +157,7 @@ void MyVRStuff::updatePosition() {
 		// move to point of rotation
 		.translate(-this->dragStartDragPointPosForRot)
 		// rotate
-		.rotateY(180.0f / float(M_PI) * (dragYaw - this->dragStartYaw))
+		.rotateY(180.0f / float(M_PI) * (dragYaw - this->dragStartYaw) * this->dragScale)
 		// unmove from point of rotation
 		.translate(this->dragStartDragPointPosForRot);
 
@@ -165,7 +167,7 @@ void MyVRStuff::updatePosition() {
 	translation.translate(
 		// add drag-n-drop delta
 		// TODO: understand why vector * matrix (as opposed to matrix * vector) works in this case
-		(dragPointPos - this->dragStartDragPointPos) * poseWithoutTranslation
+		(dragPointPos - this->dragStartDragPointPos) * this->dragScale * poseWithoutTranslation
 	);
 
 	//
@@ -209,6 +211,7 @@ void MyVRStuff::updatePosition() {
 bool MyVRStuff::getDraggedPoint(
 	Vector3 & outDragPoint,
 	float & outDragYaw,
+	float & outDragSize,
 	bool absolute
 ) const {
 	const vr::TrackingUniverseOrigin universe = (
@@ -224,6 +227,7 @@ bool MyVRStuff::getDraggedPoint(
 
 	if (dragged.size() == 1) {
 		outDragYaw = 0;
+		outDragSize = 1;
 		return getControllerPosition(this->vrSystem, universe, dragged[0].index, outDragPoint);
 	}
 
@@ -245,6 +249,7 @@ bool MyVRStuff::getDraggedPoint(
 		poseTwo
 	);
 	if (!succeedOne || !succeedTwo) return false;
+	outDragSize = poseOne.distance(poseTwo);
 	lerp(poseOne, poseTwo, 0.5, outDragPoint);
 	outDragYaw = atan2(
 		poseTwo[0] - poseOne[0],
