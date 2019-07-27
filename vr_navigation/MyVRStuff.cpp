@@ -84,14 +84,11 @@ void MyVRStuff::doProcessEvents() {
 		MyControllerState * const state = this->getOrCreateState(pEvent.trackedDeviceIndex);
 
 		state->stream.feed({
-			std::time(nullptr) - (time_t)pEvent.eventAgeSeconds,
+			std::time(nullptr) - (std::time_t)pEvent.eventAgeSeconds,
 			pEvent
 		});
 
-		auto newDragging = (
-			!state->stream.empty() &&
-			state->stream.back().event.eventType == vr::VREvent_ButtonPress
-		);
+		bool newDragging = this->isDragging(state->stream);
 
 		if (state->dragging != newDragging) {
 			log(
@@ -110,6 +107,27 @@ void MyVRStuff::doProcessEvents() {
 	if (debugEventsCount > 0) {
 		// log("that was %i events", debugEventsCount);
 	}
+}
+
+bool MyVRStuff::isDragging(Stream<WrappedEvent> & stream) const {
+	if (stream.empty()) return false;
+	auto it = stream.rbegin();
+	if (it->event.eventType != vr::VREvent_ButtonPress) return false;
+	std::time_t timestamp = it->timestamp;
+	unsigned short clicksToGo = 1;
+	for (++it; it != stream.rend(); ++it) {
+		if (it->event.eventType == vr::VREvent_ButtonPress) {
+			if (timestamp - it->timestamp < std::time_t(this->doubleClickTime)) {
+				timestamp = it->timestamp;
+				if (--clicksToGo == 0) {
+					return true;
+				}
+			} else {
+				return false;
+			}
+		}
+	}
+	return false;
 }
 
 bool MyVRStuff::updateButtonsStatus() {

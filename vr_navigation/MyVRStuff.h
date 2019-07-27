@@ -30,7 +30,6 @@ struct MyControllerState {
 
 //
 
-// TODO: enter drag on double-click
 // TODO: allow to rotate with 1 controller
 // TODO: a way to reset
 // TODO: persistent storage
@@ -50,8 +49,9 @@ class MyVRStuff {
 
 		// Params
 
-		const vr::TrackingUniverseOrigin universe   = vr::TrackingUniverseStanding;
-		const vr::EVRButtonId            dragButton = vr::k_EButton_Grip;
+		const vr::TrackingUniverseOrigin universe        = vr::TrackingUniverseStanding;
+		const vr::EVRButtonId            dragButton      = vr::k_EButton_Grip;
+		const float                      doubleClickTime = 0.25f;
 
 		//
 
@@ -87,6 +87,8 @@ class MyVRStuff {
 		MyControllerState * getOrCreateState(vr::TrackedDeviceIndex_t index);
 
 		//
+
+		bool isDragging(Stream<WrappedEvent> & stream) const;
 
 		void processEvents();
 		void doProcessEvents();

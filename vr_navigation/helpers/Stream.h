@@ -20,10 +20,12 @@ class Stream {
         , isTooOld(isTooOld)
         {}
 
-        inline auto empty() { return this->list.empty(); }
-        inline auto back()  { return this->list.back();  }
+        inline auto empty()  { return this->list.empty();  }
+        inline auto back()   { return this->list.back();   }
+        inline auto rbegin() { return this->list.rbegin(); }
+        inline auto rend()   { return this->list.rend();   }
 
-        void feed(T value) {
+        void feed(T && value) {
 			if (this->filter(value)) {
 				this->list.push_back(value);
 			}
