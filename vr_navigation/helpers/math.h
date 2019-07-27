@@ -8,10 +8,10 @@
 float lerp(float a, float b, float weight);
 
 void lerp(
-	Vector3 a,
-	Vector3 b,
-	float weight,
-	Vector3 & outResult
+    Vector3 a,
+    Vector3 b,
+    float weight,
+    Vector3 & outResult
 );
 
 float rad2deg(float rad);

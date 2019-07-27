@@ -2,19 +2,19 @@
 #include "log.h"
 
 void logError(const char * const msg) {
-	log(
-		std::string("Error: ") +
-		std::string(msg)
-	);
+    log(
+        std::string("Error: ") +
+        std::string(msg)
+    );
 }
 
 void log(const std::string& msg) {
-	log(msg.c_str());
+    log(msg.c_str());
 }
 
 void log(const char * const msg) {
-	printf(msg);
-	printf("\n");
+    printf(msg);
+    printf("\n");
 }
 
 void log(const Vector3 & pose) {

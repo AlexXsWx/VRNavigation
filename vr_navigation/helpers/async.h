@@ -33,41 +33,41 @@ SOFTWARE.
 #include <chrono>
 
 class Timer {
-	bool clear = false;
+    bool clear = false;
 
 public:
-	template <class F>
-	void setTimeout(F&& function, int delay);
+    template <class F>
+    void setTimeout(F&& function, int delay);
 
-	template <class F>
-	void setInterval(F&& function, int interval);
+    template <class F>
+    void setInterval(F&& function, int interval);
 
-	void stop();
+    void stop();
 
 };
 
 template <class F>
 void Timer::setTimeout(F&& function, int delay) {
-	this->clear = false;
-	std::thread t([=]() mutable {
-		if (this->clear) return;
-		std::this_thread::sleep_for(std::chrono::milliseconds(delay));
-		if (this->clear) return;
-		function();
-	});
-	t.detach();
+    this->clear = false;
+    std::thread t([=]() mutable {
+        if (this->clear) return;
+        std::this_thread::sleep_for(std::chrono::milliseconds(delay));
+        if (this->clear) return;
+        function();
+    });
+    t.detach();
 }
 
 template <class F>
 void Timer::setInterval(F&& function, int interval) {
-	this->clear = false;
-	std::thread t([=]() mutable {
-		while (true) {
-			if (this->clear) return;
-			std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-			if (this->clear) return;
-			function();
-		}
-	});
-	t.detach();
+    this->clear = false;
+    std::thread t([=]() mutable {
+        while (true) {
+            if (this->clear) return;
+            std::this_thread::sleep_for(std::chrono::milliseconds(interval));
+            if (this->clear) return;
+            function();
+        }
+    });
+    t.detach();
 }

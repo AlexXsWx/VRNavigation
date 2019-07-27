@@ -26,18 +26,18 @@ class Stream {
         inline auto rend()   { return this->list.rend();   }
 
         void feed(T && value) {
-			if (this->filter(value)) {
-				this->list.push_back(value);
-			}
-			this->removeOld();
-		}
+            if (this->filter(value)) {
+                this->list.push_back(value);
+            }
+            this->removeOld();
+        }
 
         void removeOld() {
-			while (
+            while (
                 !this->list.empty() &&
                 this->isTooOld(this->list.front(), this->list)
             ) {
-				this->list.pop_front();
-			}
-		}
+                this->list.pop_front();
+            }
+        }
 };

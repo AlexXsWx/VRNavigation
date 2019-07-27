@@ -30,5 +30,5 @@ SOFTWARE.
 #include "async.h"
 
 void Timer::stop() {
-	this->clear = true;
+    this->clear = true;
 }

@@ -16,6 +16,6 @@ void log(const char * const msg, Args&&... args) {
 
 template <class... Args>
 void log(const std::string& msg, Args&&... args) {
-	printf(msg.c_str(), args...);
-	printf("\n");
+    printf(msg.c_str(), args...);
+    printf("\n");
 }

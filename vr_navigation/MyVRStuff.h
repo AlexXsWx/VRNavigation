@@ -17,15 +17,15 @@
 //
 
 struct WrappedEvent {
-	std::chrono::milliseconds timestamp;
-	vr::VREvent_t event;
+    std::chrono::milliseconds timestamp;
+    vr::VREvent_t event;
 };
 
 struct MyControllerState {
-	vr::TrackedDeviceIndex_t index;
-	bool dragging    = false;
-	bool wasDragging = false;
-	Stream<WrappedEvent> stream;
+    vr::TrackedDeviceIndex_t index;
+    bool dragging    = false;
+    bool wasDragging = false;
+    Stream<WrappedEvent> stream;
 };
 
 //
@@ -36,75 +36,75 @@ struct MyControllerState {
 // TODO: config files
 class MyVRStuff {
 
-	public:
+    public:
 
-		MyVRStuff();
-		~MyVRStuff();
+        MyVRStuff();
+        ~MyVRStuff();
 
-		void start();
-		/// Called automatically on destroy
-		void stop();
+        void start();
+        /// Called automatically on destroy
+        void stop();
 
-	private:
+    private:
 
-		// Params
+        // Params
 
-		const vr::TrackingUniverseOrigin universe        = vr::TrackingUniverseStanding;
-		const vr::EVRButtonId            dragButton      = vr::k_EButton_Grip;
-		const std::chrono::milliseconds  doubleClickTime {250};
+        const vr::TrackingUniverseOrigin universe        = vr::TrackingUniverseStanding;
+        const vr::EVRButtonId            dragButton      = vr::k_EButton_Grip;
+        const std::chrono::milliseconds  doubleClickTime {250};
 
-		//
+        //
 
-		vr::IVRSystem* vrSystem = nullptr;
+        vr::IVRSystem* vrSystem = nullptr;
 
-		Timer timer;
+        Timer timer;
 
-		// Initial
+        // Initial
 
-		std::vector<vr::HmdQuad_t> initialCollisionBounds;
-		Matrix4 initialTrackingPoseStanding;
-		Matrix4 initialTrackingPoseSeated;
+        std::vector<vr::HmdQuad_t> initialCollisionBounds;
+        Matrix4 initialTrackingPoseStanding;
+        Matrix4 initialTrackingPoseSeated;
 
-		void MyVRStuff::backUpInitial();
-		void MyVRStuff::restoreBackup(bool write = false);
+        void MyVRStuff::backUpInitial();
+        void MyVRStuff::restoreBackup(bool write = false);
 
-		// Drag start
+        // Drag start
 
-		std::vector<vr::HmdQuad_t> dragStartCollisionBounds;
-		Matrix4 dragStartTrackingPose;
-		Vector3 dragStartDragPointPos;
-		// TODO: find a way to calculate this out of `dragStartDragPointPos`
-		Vector3 dragStartDragPointPosForRot;
-		float dragStartYaw = 0.0f;
-		float dragStartSize = 1.0f;
+        std::vector<vr::HmdQuad_t> dragStartCollisionBounds;
+        Matrix4 dragStartTrackingPose;
+        Vector3 dragStartDragPointPos;
+        // TODO: find a way to calculate this out of `dragStartDragPointPos`
+        Vector3 dragStartDragPointPosForRot;
+        float dragStartYaw = 0.0f;
+        float dragStartSize = 1.0f;
 
-		// Drag update
+        // Drag update
 
-		float dragScale = 1.0f;
-		float dragSize  = 1.0f;
+        float dragScale = 1.0f;
+        float dragSize  = 1.0f;
 
-		std::vector<MyControllerState> controllerStates;
-		MyControllerState * getOrCreateState(vr::TrackedDeviceIndex_t index);
+        std::vector<MyControllerState> controllerStates;
+        MyControllerState * getOrCreateState(vr::TrackedDeviceIndex_t index);
 
-		//
+        //
 
-		bool isDragging(Stream<WrappedEvent> & stream) const;
+        bool isDragging(Stream<WrappedEvent> & stream) const;
 
-		void processEvents();
-		void doProcessEvents();
-		bool updateButtonsStatus();
-		void updatePosition();
+        void processEvents();
+        void doProcessEvents();
+        bool updateButtonsStatus();
+        void updatePosition();
 
-		bool getDraggedPoint(
-			Vector3 & outDragPoint,
-			float & outDragYaw,
-			float & outDragSize,
-			bool absolute = true
-		) const;
+        bool getDraggedPoint(
+            Vector3 & outDragPoint,
+            float & outDragYaw,
+            float & outDragSize,
+            bool absolute = true
+        ) const;
 
-		//
+        //
 
-		void logTrackingPose(Matrix4 & m);
-		void logCollisionBounds(std::vector<vr::HmdQuad_t> & v);
+        void logTrackingPose(Matrix4 & m);
+        void logCollisionBounds(std::vector<vr::HmdQuad_t> & v);
 
 };
