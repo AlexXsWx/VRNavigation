@@ -102,4 +102,9 @@ class MyVRStuff {
 			bool absolute = true
 		) const;
 
+		//
+
+		void logTrackingPose(Matrix4 & m);
+		void logCollisionBounds(std::vector<vr::HmdQuad_t> & v);
+
 };

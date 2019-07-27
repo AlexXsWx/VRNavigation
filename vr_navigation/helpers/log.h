@@ -10,6 +10,12 @@ void log(const Vector3 & pose);
 
 template <class... Args>
 void log(const char * const msg, Args&&... args) {
-	printf(msg, args...);
+    printf(msg, args...);
+    printf("\n");
+}
+
+template <class... Args>
+void log(const std::string& msg, Args&&... args) {
+	printf(msg.c_str(), args...);
 	printf("\n");
 }

@@ -32,6 +32,14 @@ void MyVRStuff::backUpInitial() {
 	getTrackingPose(vr::TrackingUniverseStanding, this->initialTrackingPoseStanding);
 	getTrackingPose(vr::TrackingUniverseSeated,   this->initialTrackingPoseSeated);
 	getCollisionBounds(this->initialCollisionBounds);
+
+	// debug log
+	log("Standing:");
+	this->logTrackingPose(this->initialTrackingPoseStanding);
+	log("Seated:");
+	this->logTrackingPose(this->initialTrackingPoseSeated);
+	log("Collision bounds:");
+	this->logCollisionBounds(this->initialCollisionBounds);
 }
 
 void MyVRStuff::restoreBackup(bool write) {
@@ -156,11 +164,13 @@ bool MyVRStuff::updateButtonsStatus() {
 
 	if (!somethingDragging) {
 		this->dragScale = 1.0f;
+		log("New drag scale: %.2f", this->dragScale);
 		return false;
 	}
 
 	if (somethingStoppedDragging) {
 		this->dragScale *= this->dragSize / this->dragStartSize;
+		log("New drag scale: %.2f", this->dragScale);
 	}
 
 	const bool succeed = this->getDraggedPoint(
@@ -234,18 +244,18 @@ void MyVRStuff::updatePosition() {
 	// bounds
 
 	std::vector<vr::HmdQuad_t> collisionBounds(this->dragStartCollisionBounds);
-	for (unsigned i = 0; i < collisionBounds.size(); i++) {
-		for (unsigned j = 0; j < 4; j++) {
+	for (auto it = collisionBounds.begin(); it != collisionBounds.end(); it++) {
+		for (unsigned i = 0; i < 4; i++) {
 			Vector4 vec(
-				collisionBounds[i].vCorners[j].v[0],
-				collisionBounds[i].vCorners[j].v[1],
-				collisionBounds[i].vCorners[j].v[2],
+				it->vCorners[i].v[0],
+				it->vCorners[i].v[1],
+				it->vCorners[i].v[2],
 				1.0f
 			);
 			vec = inverseTransform * vec;
-			collisionBounds[i].vCorners[j].v[0] = vec[0];
-			collisionBounds[i].vCorners[j].v[1] = vec[1];
-			collisionBounds[i].vCorners[j].v[2] = vec[2];
+			it->vCorners[i].v[0] = vec[0];
+			it->vCorners[i].v[1] = vec[1];
+			it->vCorners[i].v[2] = vec[2];
 		}
 	}
 
@@ -341,4 +351,32 @@ MyControllerState * MyVRStuff::getOrCreateState(vr::TrackedDeviceIndex_t index) 
 	});
 
 	return &(*(this->controllerStates.end() - 1));
+}
+
+//
+
+void MyVRStuff::logTrackingPose(Matrix4 & m) {
+	log(
+		std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
+		std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
+		std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
+		std::string("%.4f\t%.4f\t%.4f\t%.4f"),
+		m[0], m[4], m[8],  m[12],
+		m[1], m[5], m[9],  m[13],
+		m[2], m[6], m[10], m[14],
+		m[3], m[7], m[11], m[15]
+	);
+}
+
+void MyVRStuff::logCollisionBounds(std::vector<vr::HmdQuad_t> & v) {
+	for (auto it = v.begin(); it != v.end(); it++) {
+		for (unsigned i = 0; i < 4; i++) {
+			log(
+				"%.2f\t%.2f\t%.2f",
+				it->vCorners[i].v[0],
+				it->vCorners[i].v[1],
+				it->vCorners[i].v[2]
+			);
+		}
+	}
 }
