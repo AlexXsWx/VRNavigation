@@ -34,6 +34,7 @@ struct MyControllerState {
 // TODO: a way to reset
 // TODO: persistent storage
 // TODO: config files
+// TODO: log how frequent the file updates
 class MyVRStuff {
 
     public:
