@@ -33,7 +33,10 @@ class Stream {
 		}
 
         void removeOld() {
-			while (this->isTooOld(this->list.front(), this->list)) {
+			while (
+                !this->list.empty() &&
+                this->isTooOld(this->list.front(), this->list)
+            ) {
 				this->list.pop_front();
 			}
 		}

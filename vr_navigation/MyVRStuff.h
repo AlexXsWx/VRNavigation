@@ -3,7 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <math.h>
-#include <ctime>
+#include <chrono>
 #include <openvr.h>
 
 #include "helpers/math.h"
@@ -17,7 +17,7 @@
 //
 
 struct WrappedEvent {
-	std::time_t timestamp;
+	std::chrono::milliseconds timestamp;
 	vr::VREvent_t event;
 };
 
@@ -51,7 +51,7 @@ class MyVRStuff {
 
 		const vr::TrackingUniverseOrigin universe        = vr::TrackingUniverseStanding;
 		const vr::EVRButtonId            dragButton      = vr::k_EButton_Grip;
-		const float                      doubleClickTime = 0.25f;
+		const std::chrono::milliseconds  doubleClickTime {250};
 
 		//
 

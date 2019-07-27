@@ -80,10 +80,10 @@ void MyVRStuff::doProcessEvents() {
 	while (this->vrSystem->PollNextEvent(&pEvent, sizeof(pEvent))) {
 		if (
 			pEvent.trackedDeviceIndex == -1
-			// && (
-			// 	pEvent.eventType == vr::VREvent_ButtonPress ||
-			// 	pEvent.eventType == vr::VREvent_ButtonUnpress
-			// )
+			&& (
+				pEvent.eventType == vr::VREvent_ButtonPress ||
+				pEvent.eventType == vr::VREvent_ButtonUnpress
+			)
 		) {
 			log("Ignoring events of device with index -1");
 			continue;
@@ -91,8 +91,11 @@ void MyVRStuff::doProcessEvents() {
 
 		MyControllerState * const state = this->getOrCreateState(pEvent.trackedDeviceIndex);
 
+		std::chrono::milliseconds now = std::chrono::duration_cast<std::chrono::milliseconds>(
+		    std::chrono::system_clock::now().time_since_epoch()
+		);
 		state->stream.feed({
-			std::time(nullptr) - (std::time_t)pEvent.eventAgeSeconds,
+			now - std::chrono::milliseconds((int)(pEvent.eventAgeSeconds * 1000)),
 			pEvent
 		});
 
@@ -121,11 +124,11 @@ bool MyVRStuff::isDragging(Stream<WrappedEvent> & stream) const {
 	if (stream.empty()) return false;
 	auto it = stream.rbegin();
 	if (it->event.eventType != vr::VREvent_ButtonPress) return false;
-	std::time_t timestamp = it->timestamp;
+	auto timestamp = it->timestamp;
 	unsigned short clicksToGo = 1;
 	for (++it; it != stream.rend(); ++it) {
 		if (it->event.eventType == vr::VREvent_ButtonPress) {
-			if (timestamp - it->timestamp < std::time_t(this->doubleClickTime)) {
+			if (timestamp - it->timestamp <= this->doubleClickTime) {
 				timestamp = it->timestamp;
 				if (--clicksToGo == 0) {
 					return true;
@@ -344,8 +347,8 @@ MyControllerState * MyVRStuff::getOrCreateState(vr::TrackedDeviceIndex_t index) 
 					value.event.trackedDeviceIndex == index
 				);
 			},
-			[](auto value, auto all) {
-				return all.back().timestamp - value.timestamp > 3000;
+			[this](auto value, auto all) {
+				return (all.back().timestamp - value.timestamp) > 5 * this->doubleClickTime;
 			}
 		)
 	});
