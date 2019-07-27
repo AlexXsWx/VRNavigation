@@ -5,6 +5,13 @@
 
 #include "../shared/Matrices.h"
 
+template<typename T>
+const T & clamp(const T & value, const T & min, const T & max) {
+    if (value < min) return min;
+    if (value > max) return max;
+    return value;
+}
+
 float lerp(float a, float b, float weight);
 
 void lerp(

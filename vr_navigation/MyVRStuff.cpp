@@ -186,9 +186,6 @@ bool MyVRStuff::updateButtonsStatus() {
     // FIXME: handle fail
     this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, whatever, false);
     if (succeed) {
-        log(this->dragStartDragPointPos);
-        log("%.2f", rad2deg(this->dragStartYaw));
-
         if (
             !getTrackingPose(this->universe, this->dragStartTrackingPose) ||
             !getCollisionBounds(this->dragStartCollisionBounds)
@@ -224,7 +221,7 @@ void MyVRStuff::updatePosition() {
         // move to point of rotation
         .translate(-this->dragStartDragPointPosForRot)
         // rotate
-        .rotateY(180.0f / float(M_PI) * (dragYaw - this->dragStartYaw) * this->dragScale)
+        .rotateY(rad2deg(dragYaw - this->dragStartYaw) * clamp(this->dragScale, 0.25f, 2.0f))
         // unmove from point of rotation
         .translate(this->dragStartDragPointPosForRot);
 
