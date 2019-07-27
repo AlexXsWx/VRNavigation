@@ -68,32 +68,48 @@ void MyVRStuff::processEvents() {
 
 void MyVRStuff::doProcessEvents() {
 	vr::VREvent_t pEvent;
-	int counter = 0;
+	int debugEventsCount = 0;
 	while (this->vrSystem->PollNextEvent(&pEvent, sizeof(pEvent))) {
 		if (
-			pEvent.eventType == vr::VREvent_ButtonPress ||
-			pEvent.eventType == vr::VREvent_ButtonUnpress
+			pEvent.trackedDeviceIndex == -1
+			// && (
+			// 	pEvent.eventType == vr::VREvent_ButtonPress ||
+			// 	pEvent.eventType == vr::VREvent_ButtonUnpress
+			// )
 		) {
-			log(
-				"button state changed, %i: %i",
-				pEvent.trackedDeviceIndex,
-				pEvent.data.controller.button == this->dragButton
-			);
-			if (
-				pEvent.trackedDeviceIndex != -1 &&
-				pEvent.data.controller.button == this->dragButton
-			) {
-				this->setDragging(
-					pEvent.trackedDeviceIndex,
-					pEvent.eventType == vr::VREvent_ButtonPress
-				);
-			}
+			log("Ignoring events of device with index -1");
+			continue;
 		}
-		counter += 1;
+
+		MyControllerState * const state = this->getOrCreateState(pEvent.trackedDeviceIndex);
+
+		state->stream.feed({
+			std::time(nullptr) - (time_t)pEvent.eventAgeSeconds,
+			pEvent
+		});
+
+		auto newDragging = (
+			!state->stream.empty() &&
+			state->stream.back().event.eventType == vr::VREvent_ButtonPress
+		);
+
+		if (state->dragging != newDragging) {
+			log(
+				"Dragging of %i changed: %i -> %i",
+				pEvent.trackedDeviceIndex,
+				state->dragging,
+				newDragging
+			);
+		}
+
+		state->dragging = newDragging;
+
+		debugEventsCount += 1;
 	}
-	// if (counter > 0) {
-	// 	log("that was %i events", counter);
-	// }
+
+	if (debugEventsCount > 0) {
+		// log("that was %i events", debugEventsCount);
+	}
 }
 
 bool MyVRStuff::updateButtonsStatus() {
@@ -276,19 +292,35 @@ bool MyVRStuff::getDraggedPoint(
 	return true;
 }
 
-void MyVRStuff::setDragging(vr::TrackedDeviceIndex_t index, bool dragging) {
-	if (index == -1) {
-		log("Ignoring dragging of -1");
-		return;
-	}
+MyControllerState * MyVRStuff::getOrCreateState(vr::TrackedDeviceIndex_t index) {
+
+	// Try to find existing
 
 	MyControllerState * state = find(
 		this->controllerStates,
-		[&index](const auto & arg) { return arg.index == index; }
+		[=](auto arg) { return arg.index == index; }
 	);
-	if (state != nullptr) {
-		state->dragging = dragging;
-	} else {
-		this->controllerStates.push_back(MyControllerState { index, dragging, false });
-	}
+
+	if (state != nullptr) return state;
+
+	// If not found, create new one
+
+	this->controllerStates.push_back({
+		index,
+		false,
+		false,
+		Stream<WrappedEvent>(
+			[this, index](auto value) {
+				return (
+					value.event.data.controller.button == this->dragButton &&
+					value.event.trackedDeviceIndex == index
+				);
+			},
+			[](auto value, auto all) {
+				return all.back().timestamp - value.timestamp > 3000;
+			}
+		)
+	});
+
+	return &(*(this->controllerStates.end() - 1));
 }

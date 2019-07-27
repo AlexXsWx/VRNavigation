@@ -3,6 +3,7 @@
 #include <vector>
 #include <algorithm>
 #include <math.h>
+#include <ctime>
 #include <openvr.h>
 
 #include "helpers/math.h"
@@ -11,13 +12,20 @@
 #include "shared/Matrices.h"
 #include "helpers/VRHelpers.h"
 #include "helpers/vectorHelpers.h"
+#include "helpers/Stream.h"
 
 //
+
+struct WrappedEvent {
+	std::time_t timestamp;
+	vr::VREvent_t event;
+};
 
 struct MyControllerState {
 	vr::TrackedDeviceIndex_t index;
 	bool dragging    = false;
 	bool wasDragging = false;
+	Stream<WrappedEvent> stream;
 };
 
 //
@@ -76,7 +84,7 @@ class MyVRStuff {
 		float dragSize  = 1.0f;
 
 		std::vector<MyControllerState> controllerStates;
-		void setDragging(vr::TrackedDeviceIndex_t index, bool dragging);
+		MyControllerState * getOrCreateState(vr::TrackedDeviceIndex_t index);
 
 		//
 

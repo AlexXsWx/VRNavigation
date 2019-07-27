@@ -154,6 +154,7 @@
     <ClInclude Include="shared\Matrices.h" />
     <ClInclude Include="shared\Vectors.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="helpers\Stream.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="helpers\vectorHelpers.h" />
     <ClInclude Include="helpers\VRHelpers.h" />
@@ -172,6 +173,7 @@
     </ClCompile>
     <ClCompile Include="helpers\vectorHelpers.cpp" />
     <ClCompile Include="helpers\VRHelpers.cpp" />
+    <ClCompile Include="helpers\Stream.cpp" />
     <ClCompile Include="vr_navigation.cpp" />
   </ItemGroup>
   <ItemGroup>
