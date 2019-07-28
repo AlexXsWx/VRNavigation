@@ -31,7 +31,6 @@ struct MyControllerState {
 //
 
 // TODO: allow to rotate with 1 controller
-// TODO: a way to reset
 // TODO: persistent storage
 // TODO: config files
 // TODO: log how frequent the file updates
