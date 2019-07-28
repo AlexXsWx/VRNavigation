@@ -6,8 +6,7 @@
       ],
       "name": "x86-Debug",
       "includePath": [
-        "${env.INCLUDE}",
-        "D:\\Alex\\Documents\\Dump\\01 - CODING\\vr_navigation\\vr_navigation\\gmtl"
+        "${env.INCLUDE}"
       ],
       "defines": [
         "WIN32",
@@ -23,8 +22,7 @@
       ],
       "name": "x86-Release",
       "includePath": [
-        "${env.INCLUDE}",
-        "D:\\Alex\\Documents\\Dump\\01 - CODING\\vr_navigation\\vr_navigation\\gmtl"
+        "${env.INCLUDE}"
       ],
       "defines": [
         "WIN32",
@@ -40,8 +38,7 @@
       ],
       "name": "x64-Debug",
       "includePath": [
-        "${env.INCLUDE}",
-        "D:\\Alex\\Documents\\Dump\\01 - CODING\\vr_navigation\\vr_navigation\\gmtl"
+        "${env.INCLUDE}"
       ],
       "defines": [
         "WIN32",
@@ -57,8 +54,7 @@
       ],
       "name": "x64-Release",
       "includePath": [
-        "${env.INCLUDE}",
-        "D:\\Alex\\Documents\\Dump\\01 - CODING\\vr_navigation\\vr_navigation\\gmtl"
+        "${env.INCLUDE}"
       ],
       "defines": [
         "WIN32",
