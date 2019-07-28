@@ -83,6 +83,28 @@ void MyVRStuff::doProcessEvents() {
     vr::VREvent_t pEvent;
     int debugEventsCount = 0;
     while (this->vrSystem->PollNextEvent(&pEvent, sizeof(pEvent))) {
+
+        if (
+            pEvent.eventType == vr::VREvent_ButtonPress &&
+            pEvent.data.controller.button == vr::k_EButton_ApplicationMenu &&
+            some(
+                this->controllerStates,
+                [](const auto & state) { return state.dragging; }
+            )
+        ) {
+            log("Reset");
+            vr::VRChaperoneSetup()->HideWorkingSetPreview();
+            vr::VRChaperoneSetup()->RevertWorkingCopy();
+            for (
+                auto it = this->controllerStates.begin();
+                it != this->controllerStates.end();
+                it++
+            ) {
+                it->dragging = false;
+                it->stream.clear();
+            }
+        }
+
         if (
             pEvent.trackedDeviceIndex == -1
             && (
@@ -331,7 +353,7 @@ MyControllerState * MyVRStuff::getOrCreateState(vr::TrackedDeviceIndex_t index) 
 
     MyControllerState * state = find(
         this->controllerStates,
-        [=](auto arg) { return arg.index == index; }
+        [=](const auto & arg) { return arg.index == index; }
     );
 
     if (state != nullptr) return state;
@@ -343,13 +365,13 @@ MyControllerState * MyVRStuff::getOrCreateState(vr::TrackedDeviceIndex_t index) 
         false,
         false,
         Stream<WrappedEvent>(
-            [this, index](auto value) {
+            [this, index](const auto & value) {
                 return (
                     value.event.data.controller.button == this->dragButton &&
                     value.event.trackedDeviceIndex == index
                 );
             },
-            [this](auto value, auto all) {
+            [this](const auto & value, const auto & all) {
                 return (all.back().timestamp - value.timestamp) > 5 * this->doubleClickTime;
             }
         )

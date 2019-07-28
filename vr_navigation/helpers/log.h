@@ -22,5 +22,6 @@ void log(const std::string& msg, Args&&... args) {
 
 template <typename Msg, class... Args>
 void logDebug(const Msg & msg, Args&&... args) {
-    log(msg, args...);
+    // TODO: command line switch --verbose
+    // log(msg, args...);
 }

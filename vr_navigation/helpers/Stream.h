@@ -24,6 +24,7 @@ class Stream {
         inline auto back()   { return this->list.back();   }
         inline auto rbegin() { return this->list.rbegin(); }
         inline auto rend()   { return this->list.rend();   }
+        inline auto clear()  { return this->list.clear();  }
 
         void feed(T && value) {
             if (this->filter(value)) {
