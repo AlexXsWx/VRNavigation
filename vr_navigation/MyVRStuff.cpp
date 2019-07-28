@@ -4,11 +4,11 @@
 // Construct / destroy
 
 MyVRStuff::MyVRStuff() {
-    log("MyVRStuff: create");
+    logDebug("MyVRStuff: create");
 }
 
 MyVRStuff::~MyVRStuff() {
-    log("MyVRStuff: destroy");
+    logDebug("MyVRStuff: destroy");
     this->stop();
 }
 
@@ -34,18 +34,22 @@ void MyVRStuff::backUpInitial() {
     getCollisionBounds(this->initialCollisionBounds);
 
     // debug log
-    log("Standing:");
+    log("\nInitial configuration:");
+    log("\nStanding:\n");
     this->logTrackingPose(this->initialTrackingPoseStanding);
-    log("Seated:");
+    log("\nSeated:\n");
     this->logTrackingPose(this->initialTrackingPoseSeated);
-    log("Collision bounds:");
+    log("\nCollision bounds:\n");
     this->logCollisionBounds(this->initialCollisionBounds);
+    log("\n");
 }
 
 void MyVRStuff::restoreBackup(bool write) {
     vr::VRChaperoneSetup()->RevertWorkingCopy();
-    log("Would restore initial");
+
+    logDebug("Would restore initial");
     return;
+
     setTrackingPose(vr::TrackingUniverseSeated,   this->initialTrackingPoseSeated);
     setTrackingPose(vr::TrackingUniverseStanding, this->initialTrackingPoseStanding);
     if (write) setCollisionBounds(this->initialCollisionBounds);
@@ -58,6 +62,7 @@ void MyVRStuff::stop() {
     this->timer.stop();
 
     if (this->vrSystem != nullptr) {
+        log("Cleaning up...");
         vr::VRChaperoneSetup()->HideWorkingSetPreview();
         // restoreBackup(true);
         this->vrSystem = nullptr;
@@ -85,7 +90,7 @@ void MyVRStuff::doProcessEvents() {
                 pEvent.eventType == vr::VREvent_ButtonUnpress
             )
         ) {
-            log("Ignoring events of device with index -1");
+            logDebug("Ignoring events of device with index -1");
             continue;
         }
 
@@ -190,7 +195,7 @@ bool MyVRStuff::updateButtonsStatus() {
             !getTrackingPose(this->universe, this->dragStartTrackingPose) ||
             !getCollisionBounds(this->dragStartCollisionBounds)
         ) {
-            log("Failed to getTrackingPose or getCollisionBounds");
+            logError("Failed to getTrackingPose or getCollisionBounds");
             // TODO: handle fail
         }
     }
@@ -294,7 +299,7 @@ bool MyVRStuff::getDraggedPoint(
     }
 
     if (dragged.size() > 2) {
-        log("Ignoring %i / %i", dragged.size() - 2, dragged.size());
+        logDebug("Ignoring %i / %i", dragged.size() - 2, dragged.size());
     }
     Vector3 poseOne;
     Vector3 poseTwo;

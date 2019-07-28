@@ -19,3 +19,8 @@ void log(const std::string& msg, Args&&... args) {
     printf(msg.c_str(), args...);
     printf("\n");
 }
+
+template <typename Msg, class... Args>
+void logDebug(const Msg & msg, Args&&... args) {
+    log(msg, args...);
+}
