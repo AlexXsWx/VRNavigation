@@ -368,7 +368,10 @@ MyControllerState * MyVRStuff::getOrCreateState(vr::TrackedDeviceIndex_t index) 
             [this, index](const auto & value) {
                 return (
                     value.event.data.controller.button == this->dragButton &&
-                    value.event.trackedDeviceIndex == index
+                    value.event.trackedDeviceIndex == index && (
+                        value.event.eventType == vr::VREvent_ButtonPress ||
+                        value.event.eventType == vr::VREvent_ButtonUnpress
+                    )
                 );
             },
             [this](const auto & value, const auto & all) {
