@@ -92,17 +92,7 @@ void MyVRStuff::doProcessEvents() {
                 [](const auto & state) { return state.dragging; }
             )
         ) {
-            log("Reset");
-            vr::VRChaperoneSetup()->HideWorkingSetPreview();
-            vr::VRChaperoneSetup()->RevertWorkingCopy();
-            for (
-                auto it = this->controllerStates.begin();
-                it != this->controllerStates.end();
-                it++
-            ) {
-                it->dragging = false;
-                it->stream.clear();
-            }
+            this->revertWorkingCopy();
         }
 
         if (
@@ -144,6 +134,20 @@ void MyVRStuff::doProcessEvents() {
 
     if (debugEventsCount > 0) {
         // log("that was %i events", debugEventsCount);
+    }
+}
+
+void MyVRStuff::revertWorkingCopy() {
+    log("Revert working copy");
+    vr::VRChaperoneSetup()->HideWorkingSetPreview();
+    vr::VRChaperoneSetup()->RevertWorkingCopy();
+    for (
+        auto it = this->controllerStates.begin();
+        it != this->controllerStates.end();
+        it++
+    ) {
+        it->dragging = false;
+        it->stream.clear();
     }
 }
 

@@ -92,6 +92,7 @@ class MyVRStuff {
 
         void processEvents();
         void doProcessEvents();
+        void revertWorkingCopy();
         bool updateButtonsStatus();
         void updatePosition();
 
