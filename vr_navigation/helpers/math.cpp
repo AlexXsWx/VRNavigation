@@ -16,6 +16,6 @@ float lerp(float a, float b, float weight) {
     return a * (1.0f - weight) + b * weight;
 }
 
-float rad2deg(float rad) {
+double rad2deg(double rad) {
     return rad / M_PI * 180.0f;
 }

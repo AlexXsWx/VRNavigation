@@ -21,4 +21,4 @@ void lerp(
     Vector3 & outResult
 );
 
-float rad2deg(float rad);
+double rad2deg(double rad);
