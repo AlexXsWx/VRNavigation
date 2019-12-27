@@ -155,6 +155,7 @@ class MyVRStuff {
         // bool isDragging(Stream<WrappedEvent> & stream) const;
 
         void revertWorkingCopy();
+        void toggleUniverse();
 
         void processEvents();
         void doProcessEvents();

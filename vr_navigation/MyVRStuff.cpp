@@ -12,6 +12,14 @@ std::chrono::milliseconds timestampFromEventAgeSeconds(float eventAgeSeconds) {
     );
 }
 
+const char* universeToStr(vr::TrackingUniverseOrigin universe) {
+    switch(universe) {
+        case vr::TrackingUniverseSeated:   return "seated";
+        case vr::TrackingUniverseStanding: return "standing";
+        default: return "other";
+    }
+}
+
 // Construct / destroy
 
 MyVRStuff::MyVRStuff() {
@@ -51,6 +59,16 @@ void MyVRStuff::registerHotkeys() {
         [this](const auto deviceIndex) {
             if (this->isButtonHeld(deviceIndex, this->dragButton, 2)) {
                 this->revertWorkingCopy();
+            }
+        }
+    );
+
+    registerButtonListener(
+        this->revertOrToggleUniverseButton,
+        2,
+        [this](const auto deviceIndex) {
+            if (this->isButtonHeld(deviceIndex, this->dragButton, 2)) {
+                this->toggleUniverse();
             }
         }
     );
@@ -269,6 +287,18 @@ void MyVRStuff::revertWorkingCopy() {
     //     it->dragging = false;
     //     it->stream.clear();
     // }
+}
+
+void MyVRStuff::toggleUniverse() {
+    this->revertWorkingCopy();
+    const auto oldUniverseStr = universeToStr(this->universe);
+    this->universe = (
+        this->universe != vr::TrackingUniverseStanding
+            ? vr::TrackingUniverseStanding
+            : vr::TrackingUniverseSeated
+    );
+    const auto newUniverseStr = universeToStr(this->universe);
+    log("Toggled universe from %s to %s", oldUniverseStr, newUniverseStr);
 }
 
 // bool MyVRStuff::isDragging(Stream<WrappedEvent> & stream) const {
