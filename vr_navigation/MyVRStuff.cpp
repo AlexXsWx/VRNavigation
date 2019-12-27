@@ -20,6 +20,32 @@ const char* universeToStr(vr::TrackingUniverseOrigin universe) {
     }
 }
 
+void logTrackingPose(Matrix4 & m) {
+    log(
+        std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
+        std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
+        std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
+        std::string("%.4f\t%.4f\t%.4f\t%.4f"),
+        m[0], m[4], m[8],  m[12],
+        m[1], m[5], m[9],  m[13],
+        m[2], m[6], m[10], m[14],
+        m[3], m[7], m[11], m[15]
+    );
+}
+
+void logCollisionBounds(std::vector<vr::HmdQuad_t> & v) {
+    for (auto it = v.begin(); it != v.end(); it++) {
+        for (unsigned i = 0; i < 4; i++) {
+            log(
+                "%.2f\t%.2f\t%.2f",
+                it->vCorners[i].v[0],
+                it->vCorners[i].v[1],
+                it->vCorners[i].v[2]
+            );
+        }
+    }
+}
+
 // Construct / destroy
 
 MyVRStuff::MyVRStuff() {
@@ -44,12 +70,10 @@ void MyVRStuff::registerHotkeys() {
             }
             log("Device %i has now started dragging", deviceIndex);
             this->dragging[deviceIndex] = true;
-            // this->getOrCreateState(deviceIndex).dragging = true;
         },
         [this](const auto deviceIndex) {
             log("Device %i has now stopped dragging", deviceIndex);
             this->dragging[deviceIndex] = false;
-            // this->getOrCreateState(deviceIndex).dragging = false;
         }
     );
 
@@ -89,7 +113,7 @@ bool MyVRStuff::isButtonHeld(
     vr::EVRButtonId button,
     uint8_t clickCount
 ) {
-    const auto buttonState = this->controllerStates[deviceIndex].buttonState[button];
+    const auto buttonState = this->controllerState[deviceIndex].buttonState[button];
     return (
         buttonState.pressed &&
         buttonState.pressCount >= clickCount
@@ -128,7 +152,7 @@ void MyVRStuff::start() {
 
     registerHotkeys();
 
-    this->timer.setInterval(
+    this->mainLoopTimer.setInterval(
         [this]() mutable { this->processEvents(); },
         16
     );
@@ -143,12 +167,16 @@ void MyVRStuff::backUpInitial() {
 
     // debug log
     log("\nInitial configuration:");
+
     log("\nStanding:\n");
-    this->logTrackingPose(this->initialTrackingPoseStanding);
+    logTrackingPose(this->initialTrackingPoseStanding);
+
     log("\nSeated:\n");
-    this->logTrackingPose(this->initialTrackingPoseSeated);
+    logTrackingPose(this->initialTrackingPoseSeated);
+
     log("\nCollision bounds:\n");
-    this->logCollisionBounds(this->initialCollisionBounds);
+    logCollisionBounds(this->initialCollisionBounds);
+
     log("\n");
 }
 
@@ -167,7 +195,7 @@ void MyVRStuff::restoreBackup(bool write) {
 //
 
 void MyVRStuff::stop() {
-    this->timer.stop();
+    this->mainLoopTimer.stop();
 
     if (this->vrSystem != nullptr) {
         log("Cleaning up...");
@@ -191,42 +219,14 @@ void MyVRStuff::doProcessEvents() {
     vr::VREvent_t pEvent;
     int debugEventsCount = 0;
     while (this->vrSystem->PollNextEvent(&pEvent, sizeof(pEvent))) {
-
-        // if (
-        //     pEvent.eventType == vr::VREvent_ButtonPress &&
-        //     pEvent.data.controller.button == vr::k_EButton_ApplicationMenu &&
-        //     some(
-        //         this->controllerStates,
-        //         [](const auto & state) { return state.dragging; }
-        //     )
-        // ) {
-        //     this->revertWorkingCopy();
-        // }
-
-        // if (
-        //     pEvent.trackedDeviceIndex == -1
-        //     && (
-        //         pEvent.eventType == vr::VREvent_ButtonPress ||
-        //         pEvent.eventType == vr::VREvent_ButtonUnpress
-        //     )
-        // ) {
-        //     logDebug("Ignoring events of device with index -1");
-        //     continue;
-        // }
-
         if (
             pEvent.eventType == vr::VREvent_ButtonPress ||
             pEvent.eventType == vr::VREvent_ButtonUnpress
         ) {
             const auto button = (vr::EVRButtonId)pEvent.data.controller.button;
-
-            // MyControllerState * const controllerState = (
-            //     this->getOrCreateState(pEvent.trackedDeviceIndex)
-            // );
-
             const auto timestamp = timestampFromEventAgeSeconds(pEvent.eventAgeSeconds);
 
-            auto & controllerState = this->controllerStates[pEvent.trackedDeviceIndex];
+            auto & controllerState = this->controllerState[pEvent.trackedDeviceIndex];
             auto & buttonState = controllerState.buttonState[button];
             if (pEvent.eventType == vr::VREvent_ButtonPress) {
                 if (timestamp - buttonState.lastPressTimestamp > this->doubleClickTime) {
@@ -249,22 +249,7 @@ void MyVRStuff::doProcessEvents() {
                     pEvent.trackedDeviceIndex, button, buttonState.pressCount, false
                 );
             }
-
-            // controllerState->stream.feed({ timestamp, pEvent });
         }
-
-        // bool newDragging = this->isDragging(controllerState->stream);
-
-        // if (controllerState->dragging != newDragging) {
-        //     log(
-        //         "Dragging of %i changed: %i -> %i",
-        //         pEvent.trackedDeviceIndex,
-        //         controllerState->dragging,
-        //         newDragging
-        //     );
-        // }
-
-        // controllerState->dragging = newDragging;
 
         debugEventsCount += 1;
     }
@@ -279,14 +264,6 @@ void MyVRStuff::revertWorkingCopy() {
     vr::VRChaperoneSetup()->HideWorkingSetPreview();
     vr::VRChaperoneSetup()->RevertWorkingCopy();
     this->dragging.clear();
-    // for (
-    //     auto it = this->controllerStates.begin();
-    //     it != this->controllerStates.end();
-    //     it++
-    // ) {
-    //     it->dragging = false;
-    //     it->stream.clear();
-    // }
 }
 
 void MyVRStuff::toggleUniverse() {
@@ -300,27 +277,6 @@ void MyVRStuff::toggleUniverse() {
     const auto newUniverseStr = universeToStr(this->universe);
     log("Toggled universe from %s to %s", oldUniverseStr, newUniverseStr);
 }
-
-// bool MyVRStuff::isDragging(Stream<WrappedEvent> & stream) const {
-//     if (stream.empty()) return false;
-//     auto it = stream.rbegin();
-//     if (it->event.eventType != vr::VREvent_ButtonPress) return false;
-//     auto timestamp = it->timestamp;
-//     unsigned short clicksToGo = 1;
-//     for (++it; it != stream.rend(); ++it) {
-//         if (it->event.eventType == vr::VREvent_ButtonPress) {
-//             if (timestamp - it->timestamp <= this->doubleClickTime) {
-//                 timestamp = it->timestamp;
-//                 if (--clicksToGo == 0) {
-//                     return true;
-//                 }
-//             } else {
-//                 return false;
-//             }
-//         }
-//     }
-//     return false;
-// }
 
 bool MyVRStuff::updateDragging() {
 
@@ -363,17 +319,23 @@ bool MyVRStuff::updateDragging() {
     );
     this->dragSize = this->dragStartSize;
     float whatever;
-    // FIXME: handle fail
-    this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, whatever, false);
-    if (succeed) {
+    if (
+        succeed &&
+        // FIXME: handle fail
+        this->getDraggedPoint(this->dragStartDragPointPosForRot, whatever, whatever, false)
+    ) {
         if (
+            // FIXME: handle fail
             !getTrackingPose(this->universe, this->dragStartTrackingPose) ||
+            // FIXME: handle fail
             !getCollisionBounds(this->dragStartCollisionBounds)
         ) {
             logError("Failed to getTrackingPose or getCollisionBounds");
-            // TODO: handle fail
             return false;
         }
+    } else {
+        logError("Failed to getDraggedPoint");
+        return false;
     }
 
     return true;
@@ -502,68 +464,4 @@ bool MyVRStuff::getDraggedPoint(
         poseTwo[2] - poseOne[2]
     );
     return true;
-}
-
-// MyControllerState * MyVRStuff::getOrCreateState(vr::TrackedDeviceIndex_t index) {
-
-//     // Try to find existing
-
-//     MyControllerState * state = find(
-//         this->controllerStates,
-//         [=](const auto & arg) { return arg.index == index; }
-//     );
-
-//     if (state != nullptr) return state;
-
-//     // If not found, create new one
-
-//     this->controllerStates.push_back({
-//         index,
-//         false,
-//         false,
-//         Stream<WrappedEvent>(
-//             [this, index](const auto & value) {
-//                 return (
-//                     value.event.data.controller.button == this->dragButton &&
-//                     value.event.trackedDeviceIndex == index && (
-//                         value.event.eventType == vr::VREvent_ButtonPress ||
-//                         value.event.eventType == vr::VREvent_ButtonUnpress
-//                     )
-//                 );
-//             },
-//             [this](const auto & value, const auto & all) {
-//                 return (all.back().timestamp - value.timestamp) > 5 * this->doubleClickTime;
-//             }
-//         )
-//     });
-
-//     return &(*(this->controllerStates.end() - 1));
-// }
-
-//
-
-void MyVRStuff::logTrackingPose(Matrix4 & m) {
-    log(
-        std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
-        std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
-        std::string("%.4f\t%.4f\t%.4f\t%.4f\n") +
-        std::string("%.4f\t%.4f\t%.4f\t%.4f"),
-        m[0], m[4], m[8],  m[12],
-        m[1], m[5], m[9],  m[13],
-        m[2], m[6], m[10], m[14],
-        m[3], m[7], m[11], m[15]
-    );
-}
-
-void MyVRStuff::logCollisionBounds(std::vector<vr::HmdQuad_t> & v) {
-    for (auto it = v.begin(); it != v.end(); it++) {
-        for (unsigned i = 0; i < 4; i++) {
-            log(
-                "%.2f\t%.2f\t%.2f",
-                it->vCorners[i].v[0],
-                it->vCorners[i].v[1],
-                it->vCorners[i].v[2]
-            );
-        }
-    }
 }

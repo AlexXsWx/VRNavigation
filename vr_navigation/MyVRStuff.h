@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <string>
 #include <math.h>
 #include <chrono>
 #include <openvr.h>
@@ -12,8 +13,6 @@
 #include "helpers/async.h"
 #include "shared/Matrices.h"
 #include "helpers/VRHelpers.h"
-// #include "helpers/vectorHelpers.h"
-// #include "helpers/Stream.h"
 
 //
 
@@ -26,18 +25,6 @@ struct MapDefaultValueType {
     operator T const & () const { return value; }
     T value;
 };
-
-// struct WrappedEvent {
-//     std::chrono::milliseconds timestamp;
-//     vr::VREvent_t event;
-// };
-
-// struct MyControllerState {
-//     vr::TrackedDeviceIndex_t index;
-//     bool dragging    = false;
-//     bool wasDragging = false;
-//     Stream<WrappedEvent> stream;
-// }
 
 struct MyButtonState {
     std::chrono::milliseconds lastPressTimestamp {0};
@@ -78,7 +65,7 @@ class MyVRStuff {
         // Params
         const vr::EVRButtonId dragButton                   = vr::k_EButton_Grip;
         const vr::EVRButtonId revertOrToggleUniverseButton = vr::k_EButton_ApplicationMenu;
-        const std::chrono::milliseconds  doubleClickTime {250};
+        const std::chrono::milliseconds doubleClickTime {250};
 
         //
 
@@ -86,16 +73,20 @@ class MyVRStuff {
 
         vr::IVRSystem* vrSystem = nullptr;
 
-        Timer timer;
+        Timer mainLoopTimer;
 
         // Input
 
         std::map<
             vr::TrackedDeviceIndex_t,
             MyControllerState
-        > controllerStates;
-        // std::vector<MyControllerState> controllerStates;
-        // MyControllerState * getOrCreateState(vr::TrackedDeviceIndex_t index);
+        > controllerState;
+
+        bool isButtonHeld(
+            vr::TrackedDeviceIndex_t deviceIndex,
+            vr::EVRButtonId button,
+            uint8_t clickCount
+        );
 
         std::vector<ButtonListenerParams> buttonListeners;
 
@@ -106,12 +97,6 @@ class MyVRStuff {
             std::function<void(const vr::TrackedDeviceIndex_t & value)> onRelease
                 // TODO: clean up
                 = [](const auto deviceIndex){}
-        );
-
-        bool isButtonHeld(
-            vr::TrackedDeviceIndex_t deviceIndex,
-            vr::EVRButtonId button,
-            uint8_t clickCount
         );
 
         void notifyListeners(
@@ -152,16 +137,14 @@ class MyVRStuff {
 
         void registerHotkeys();
 
-        // bool isDragging(Stream<WrappedEvent> & stream) const;
-
-        void revertWorkingCopy();
-        void toggleUniverse();
-
         void processEvents();
         void doProcessEvents();
 
         bool updateDragging();
         void updatePosition();
+
+        void revertWorkingCopy();
+        void toggleUniverse();
 
         bool getDraggedPoint(
             Vector3 & outDragPoint,
@@ -169,10 +152,4 @@ class MyVRStuff {
             float & outDragSize,
             bool absolute = true
         ) const;
-
-        //
-
-        void logTrackingPose(Matrix4 & m);
-        void logCollisionBounds(std::vector<vr::HmdQuad_t> & v);
-
 };
